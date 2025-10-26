@@ -1,0 +1,165 @@
+# University Internal System - Transformation Plan
+
+## Overview
+
+Transform the existing delivery/pickup system into an internal university management system by:
+
+1. Removing external HQ and POS API dependencies ✅
+2. Adding User model with role-based access control ✅
+3. Adding Company model (departments/organizations) ✅
+4. Replacing phone authentication with email-based authentication using nodemailer ✅
+5. Implementing internal CRUD operations for routes and other resources ✅
+6. Making company managers able to manage their company's routes ✅
+
+## Phase 1: Database Schema Changes ✅ COMPLETED
+
+### 1.1 New Models (backend/prisma/schema.prisma)
+
+#### User Model ✅
+
+#### Company Model ✅
+
+#### Route Model ✅
+
+#### PickupRequest Model ✅
+
+### 1.2 Update EmailOtp Model ✅
+
+### 1.3 Migration Strategy ✅
+
+## Phase 2: Backend Changes ✅ COMPLETED
+
+### 2.1 Remove External API Dependencies ✅
+
+#### Files Modified:
+
+- `backend/src/modules/customers/customers.service.ts` ✅ - Replaced with internal Prisma operations
+- `backend/src/modules/pickups/pickups.service.ts` ✅ - Replaced with internal Prisma operations
+- `backend/src/modules/pickups/routes.service.ts` ✅ - Replaced with internal Prisma operations
+
+### 2.2 Email Authentication Implementation ✅
+
+#### Created: backend/src/lib/email/email.service.ts ✅
+
+#### Updated: backend/src/modules/auth/otp.service.ts ✅
+
+#### Updated: backend/src/modules/auth/auth.controller.ts ✅
+
+#### Updated: backend/src/modules/auth/auth.service.ts ✅
+
+#### Updated: backend/src/modules/auth/auth.types.ts ✅
+
+#### Updated: backend/src/lib/validation.ts ✅
+
+### 2.3 User Management Module ✅
+
+#### Created: backend/src/modules/users/ ✅
+
+- users.service.ts ✅
+- users.controller.ts ✅
+- users.router.ts ✅
+- users.types.ts ✅
+
+#### Created: backend/src/modules/companies/ ✅
+
+- companies.service.ts ✅
+- companies.controller.ts ✅
+- companies.router.ts ✅
+- companies.types.ts ✅
+
+### 2.4 Route Management Module ✅
+
+#### Updated: backend/src/modules/pickups/routes.service.ts ✅
+
+#### Created: backend/src/modules/routes/routes.controller.ts ✅
+
+#### Updated: backend/src/modules/routes/routes.router.ts ✅
+
+### 2.5 Role-Based Access Control ✅
+
+#### Created: backend/src/middleware/role-check.middleware.ts ✅
+
+#### Updated Routes: ✅
+
+- Users router ✅
+- Companies router ✅
+- Routes router ✅
+
+### 2.6 Update Customers Module ✅
+
+#### Updated: backend/src/modules/customers/ ✅
+
+- customers.service.ts ✅ - Replaced external API calls
+- customers.controller.ts ✅ - Updated to work with internal service
+
+### 2.7 Environment Variables ⏳ PENDING
+
+Add to backend/.env:
+
+```
+# Email Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+EMAIL_FROM=noreply@university.edu
+```
+
+## Phase 3: Frontend Changes ⏳ PENDING
+
+### 3.1 Authentication Pages
+
+### 3.2 Update Redux State
+
+### 3.3 User Profile Pages
+
+### 3.4 Company Management Pages
+
+### 3.5 Route Management
+
+### 3.6 Navigation Updates
+
+### 3.7 Forms
+
+## Phase 4: Testing & Verification ⏳ PENDING
+
+### 4.1 Database Migration ⏳
+
+- Run Prisma migration: `npx prisma migrate dev`
+- Seed database with initial admin user
+
+### 4.2 Backend Testing ⏳
+
+### 4.3 Frontend Testing ⏳
+
+## Phase 5: Cleanup ⏳ PENDING
+
+### 5.1 Remove Unused Code
+
+### 5.2 Update Documentation
+
+### 5.3 Configuration
+
+## Implementation Order
+
+1. ✅ Database schema (Phase 1)
+2. ✅ Email authentication (Phase 2.2)
+3. ✅ User and Company models (Phase 2.3)
+4. ✅ Remove external APIs (Phase 2.1)
+5. ✅ Route management (Phase 2.4)
+6. ✅ Role-based access (Phase 2.5)
+7. ⏳ Frontend email auth (Phase 3.1)
+8. ⏳ Frontend user/company pages (Phase 3.3-3.4)
+9. ⏳ Testing (Phase 4)
+10. ⏳ Cleanup (Phase 5)
+
+## Next Steps
+
+1. **Environment Variables**: Add SMTP configuration to `.env` file
+2. **Database Migration**: Run Prisma migrations
+3. **Frontend Implementation**: Transform frontend to use email auth and new models
+4. **Testing**: Test the complete flow
+5. **Cleanup**: Remove unused code and update documentation
+   alwaysApply: true
+
+---

@@ -1,0 +1,9 @@
+---
+description: Code generation rule to focus on task at hand and not do anything else
+globs: 
+alwaysApply: false
+---
+It's imperative to only make changes that are directly requested/outlined in a plan.
+Do not change other modules unless directly asked to.
+Do not create functionality that you were not directly requested to OR that is not explicitly required for you to accomplish the current task.
+Focus on current task/plan only.

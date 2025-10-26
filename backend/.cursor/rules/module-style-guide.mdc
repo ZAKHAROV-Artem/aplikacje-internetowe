@@ -1,0 +1,72 @@
+---
+description: Creating modules, new files, naming convention etc
+alwaysApply: false
+---
+
+# Module & Naming Convention (Cursor Rule)
+
+This codebase uses domain-based modules (not one module per database model). A module represents a business capability and may contain multiple aggregates/entities under the same feature.
+
+Examples of domain grouping (from HQ concepts):
+
+- Scheduled shifts and roster → one `scheduling` module
+- Time approvals and clocked shifts → one `time-tracking` module
+
+1. Directory structure  
+   modules/  
+   └─ <feature>/  
+    ├─ <feature>.service.ts  
+    ├─ <feature>.controller.ts  
+    ├─ <feature>.router.ts  
+    ├─ (optional) <subfeature>/  
+    │ ├─ <subfeature>.service.ts  
+    │ ├─ <subfeature>.controller.ts  
+    │ └─ <subfeature>.router.ts  
+    └─ (optional) shared/  
+    └─ types.ts (DTOs, validators local to the module)
+
+   Notes:
+
+   - Directory and file names are kebab-case (e.g., `time-tracking`, `roster.controller.ts`).
+   - Exported classes/types use PascalCase (e.g., `SchedulingService`).
+   - Keep module-internal helpers private to the module directory.
+
+2. Service class verbs  
+   class <Feature>Service {
+   async get(filters?) // collection fetch (was `list`)
+   async getById(id: string) // single entity
+   async create(dto)
+   async update(id, dto) // always exposed via HTTP PATCH
+   async delete(id) // soft-delete if the model carries a status enum, else hard
+   }
+
+   Large features can expose additional focused services (e.g., `RosterService`, `ShiftsService`) under the same module.
+
+3. Controller mirrors the service: get, getById, create, update, delete.
+
+4. Router paths & verbs (primary aggregate)  
+   GET /api/<entities> → controller.get (collection)  
+   POST /api/<entities> → controller.create  
+   GET /api/<entities>/:id → controller.getById  
+   PATCH /api/<entities>/:id → controller.update  
+   DELETE /api/<entities>/:id → controller.delete
+
+   Subroutes within a module should namespace by feature:
+
+   - `scheduling` module may expose:
+     - GET /api/scheduling/roster
+     - POST /api/scheduling/roster
+     - GET /api/scheduling/scheduled-shifts
+     - PATCH /api/scheduling/scheduled-shifts/:shiftId
+   - `time-tracking` module may expose:
+     - GET /api/time-tracking/clocked-shifts
+     - POST /api/time-tracking/clocked-shifts
+     - PATCH /api/time-tracking/time-approvals/:approvalId
+
+5. Parameters follow camelCase id names (`orderId`, `companyName`, `shiftId`, `approvalId`) and request bodies align with schema casing.
+
+6. Consistency rules
+   - Updates are always via HTTP PATCH.
+   - Prefer soft-delete if the model supports a status enum; otherwise hard-delete.
+   - Validation and DTOs live close to their module.
+   - Cross-module reuse happens via explicit interfaces or a `modules/shared` package; avoid tight coupling.

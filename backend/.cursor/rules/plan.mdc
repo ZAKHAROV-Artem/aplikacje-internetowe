@@ -1,0 +1,17 @@
+---
+description: Plan the work, don't code
+globs: 
+alwaysApply: false
+---
+# Search
+Search the app code to investigate how the requested function is structured.
+Take one module as an example and go over full execution chain to understand how navigation.
+
+# When understood:
+> Always simplify, do not overcomplicate and add things that were not explicitly required/requested.
+1. ouline concise high-level plan
+2. output the exact files list we need to change and a few sentences summary on actionable and exhaustive changes in each.
+3. DO NOT STOP until you are sure you've accounted for all dependencies.
+
+# DO NOT code yet. DO not create files yet.
+3. Ask any questions/clarification if they will help you come up with significantly more accurate plan. 

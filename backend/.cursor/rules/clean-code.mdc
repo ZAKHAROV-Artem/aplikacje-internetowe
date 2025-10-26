@@ -1,0 +1,14 @@
+---
+alwaysApply: true
+---
+
+Clean Code Rule for Cursor
+Use meaningful, descriptive names for variables, functions, and classes.
+Functions should be small and focused, doing only one thing.
+Avoid magic numbers/strings — replace them with named constants.
+
+Prefer explicitness over cleverness — write code that is easy to read, not just easy to write.
+Add docstrings or comments only where necessary (why, not what).
+Follow a consistent style (indentation, spacing, naming conventions).
+Handle errors gracefully instead of ignoring exceptions.
+Delete unused code, imports, or variables immediately.

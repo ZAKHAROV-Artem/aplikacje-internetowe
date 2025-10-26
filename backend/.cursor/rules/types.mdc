@@ -1,0 +1,38 @@
+---
+description: this is about the types of the backend, please apply it in cases where you consider changing or amending the types.
+globs: 
+alwaysApply: false
+---
+# General approach
+
+Try to use types as simply as possible but never use `any`. We have Magnoli-types as a collection of the most important types that are in-between the projects. In cases where you see multiple applications would benefit from this type, for example, when we type in the interface or a data structure in between the front and the back, suggest to update Magnoli-types.
+
+
+The whole project revolves around few concepts:
+    1. Order
+    2. Customer
+    3. Order Item
+    4. Customer Wardrobe
+
+Types must be representing the `prisma/schema.prisma` models as much as possible and we must only create new types when reusing existing prisma model types would be a bad practice.
+
+Otherwise types must be relaxed and simplified as much as possible. If somewhere types must be made more strict I will tell you.
+
+Avoid `any` unless this will significantly overcomplicate the system.
+
+Keep types for different entities eeparately.
+
+## Where to apply
+
+Typing must be enforced where components pass information to one another, on I/O of the system (API)
+
+In case it's a local type defining a filter or state or smth you can keep it in the same file until it's 5 lines of code.
+as soon as it's longer - create a `/types` folder within respective module (`src/modules`) and move all the local types there.
+
+Keep types that are describing global app concepts in `src/shared/types` separated by `order.types.ts`, `customer.types.ts`, `catalogue.types.ts` etc respectively.
+
+## Import 
+To import types in other modules, you can now use a simple import statement like this:
+```import { Order, Customer, ItemType } from '@/shared/types';```
+
+# ONLY create types that are required in the current functionality, do not create them "for might be useful"

@@ -1,0 +1,167 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Customer, Location, and Event models removed — managed in external POS
+
+model Event {
+  id         String   @id @default(uuid())
+  type       String
+  createdAt  DateTime @default(now())
+  receivedAt DateTime @updatedAt
+  payload    Json?
+  status     String   @default("pending")
+  attempts   Int      @default(0)
+  lastError  String?
+  customerId String?
+
+  @@index([id])
+  @@index([customerId])
+}
+
+model EmailOtp {
+  id String @id @default(uuid())
+  email String
+  code String
+  expiresAt DateTime
+  consumedAt DateTime?
+  attempts Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model DeliveryAppSettings {
+  id                 String   @id @default(uuid())
+  magnoliCustomerId  String   @unique
+  deliveryAppUrl     String   @unique
+  settings           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([magnoliCustomerId])
+}
+
+model Company {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String?
+  managerId   String
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  manager     User        @relation("CompanyManager", fields: [managerId], references: [id], onDelete: Restrict)
+  users       User[]
+  routes      Route[]
+  pickupRequests PickupRequest[]
+
+  @@index([managerId])
+}
+
+enum UserRole {
+  ADMIN
+  COMPANY_MANAGER
+  USER
+}
+
+model User {
+  id              String       @id @default(uuid())
+  email           String       @unique
+  password        String?
+  firstName       String
+  lastName        String
+  role            UserRole     @default(USER)
+  companyId       String?
+  isActive        Boolean      @default(true)
+  refreshTokenHash String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  company         Company?     @relation(fields: [companyId], references: [id])
+  managedCompanies Company[]   @relation("CompanyManager")
+  pickupRequests  PickupRequest[]
+  locations       Location[]
+
+  @@index([email])
+  @@index([companyId])
+  @@index([role])
+}
+
+model Location {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String   @default("Home")
+  address     String
+  city        String
+  state       String
+  zip         String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pickupRequests PickupRequest[]
+
+  @@index([userId])
+  @@index([zip])
+}
+
+model Route {
+  id            String       @id @default(uuid())
+  companyId     String
+  name          String
+  zipCodes      String[]
+  weekdays      String[]
+  startTimeMins Int
+  endTimeMins   Int
+  pricelistId   String?
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  company       Company      @relation(fields: [companyId], references: [id])
+  pickupRequests PickupRequest[]
+
+  @@index([companyId])
+  @@index([active])
+}
+
+model PickupRequest {
+  id            String       @id @default(uuid())
+  userId        String
+  routeId       String
+  companyId     String
+  locationId    String?
+  status        String       @default("pending")
+  pickupDate    DateTime
+  dropoffDate   DateTime
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  user          User         @relation(fields: [userId], references: [id])
+  route         Route        @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  company       Company      @relation(fields: [companyId], references: [id])
+  location      Location?    @relation(fields: [locationId], references: [id])
+
+  @@index([userId])
+  @@index([routeId])
+  @@index([companyId])
+  @@index([status])
+}
