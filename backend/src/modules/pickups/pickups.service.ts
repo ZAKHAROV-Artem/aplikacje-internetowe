@@ -31,9 +31,14 @@ class PickupsService {
         company: true,
         location: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: [
+        {
+          pickupDate: "desc",
+        },
+        {
+          createdAt: "desc",
+        },
+      ],
       skip: (page - 1) * limit,
       take: limit,
     });

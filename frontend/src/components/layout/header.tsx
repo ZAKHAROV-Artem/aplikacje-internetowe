@@ -41,32 +41,15 @@ export default function Header() {
         <div className="hidden md:block px-3 max-w-7xl mx-auto">
           {accessToken ? (
             /* Authenticated: Company info left, nav right */
-            <div className="flex items-center justify-between">
-              {/* Company Info */}
-              <div className="flex items-center gap-3">
-                <div>
-                  <h1 className="text-2xl font-bold">
-                    {company?.name || "CS Department"}
-                  </h1>
-                  <p className="text-sm text-muted-foreground">
-                    {company?.description ||
-                      "Computer Science Department of the University"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* User Account Section - only show on desktop */}
-                {!shouldHideNav && (
-                  <div className="h-10 flex items-stretch">
-                    <MobileUserDropup
-                      direction="down"
-                      showName
-                      variant="desktop"
-                      hideAdminLinks={false}
-                    />
-                  </div>
-                )}
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold">
+                  {company?.name || "CS Department"}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {company?.description ||
+                    "Computer Science Department of the University"}
+                </p>
               </div>
             </div>
           ) : (

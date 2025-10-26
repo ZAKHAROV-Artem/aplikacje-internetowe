@@ -77,23 +77,18 @@ export default function AdminDashboard() {
     clearFilters,
   } = useDashboardFilters(orders);
 
-  // Note: We're doing client-side pagination of groups instead of using server metadata
-  // This is because grouping requires all orders from the page
+  // Note: We're doing client-side grouping but using server pagination metadata
 
   // Group orders by date
   const { groupedOrders, expandedGroups, toggleGroup } =
     useOrderGrouping(filteredOrders);
 
-  // Paginate the groups - show 3 groups per page
-  const groupsPerPage = 3;
+  // Show all groups from the current page of orders
   const allGroups = Object.entries(groupedOrders);
-  const totalGroupsPages = Math.ceil(allGroups.length / groupsPerPage);
-  const startIndex = (pagination.page - 1) * groupsPerPage;
-  const endIndex = startIndex + groupsPerPage;
-  const paginatedGroups = allGroups.slice(startIndex, endIndex);
+  const paginatedGroups = allGroups;
 
-  // Use the calculated total pages for groups
-  const totalPages = totalGroupsPages || 1;
+  // Use server metadata for pagination
+  const totalPages = ordersResponse?.data?.meta?.totalPages || 1;
 
   const {
     selectedOrders,
