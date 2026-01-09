@@ -1,10 +1,10 @@
+import { createError } from "@/lib/responses";
 import { prisma } from "../../lib/prisma";
 import {
   CreateCompanyInput,
   UpdateCompanyInput,
   CompanyResponse,
 } from "./companies.types";
-import { NotFoundError } from "../../lib/http";
 
 class CompaniesService {
   async create(data: CreateCompanyInput): Promise<CompanyResponse> {
@@ -29,7 +29,7 @@ class CompaniesService {
     });
 
     if (!company) {
-      throw new NotFoundError("Company not found", { companyId: id });
+      throw createError.NotFound("Company not found", { companyId: id });
     }
 
     return this.mapToResponse(company);
@@ -73,7 +73,7 @@ class CompaniesService {
     });
 
     if (!company) {
-      throw new NotFoundError("Company not found");
+      throw createError.NotFound("Company not found");
     }
 
     return this.mapToResponse(company);
@@ -84,6 +84,7 @@ class CompaniesService {
       id: company.id,
       name: company.name,
       description: company.description,
+      logo: company.logo,
       managerId: company.managerId,
       isActive: company.isActive,
       createdAt: company.createdAt,

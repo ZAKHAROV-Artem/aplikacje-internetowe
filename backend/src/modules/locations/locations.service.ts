@@ -4,7 +4,7 @@ import {
   UpdateLocationInput,
   LocationResponse,
 } from "./locations.types";
-import { NotFoundError } from "../../lib/http";
+import { createError } from "@/lib/responses";
 
 class LocationsService {
   async create(
@@ -44,7 +44,7 @@ class LocationsService {
     });
 
     if (!location) {
-      throw new NotFoundError("Location not found", { locationId: id });
+      throw createError.NotFound("Location not found", { locationId: id });
     }
 
     return this.mapToResponse(location);
@@ -59,7 +59,7 @@ class LocationsService {
     });
 
     if (!currentLocation) {
-      throw new NotFoundError("Location not found", { locationId: id });
+      throw createError.NotFound("Location not found", { locationId: id });
     }
 
     // If setting as default, unset other defaults

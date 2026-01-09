@@ -1,8 +1,8 @@
+import { createError } from "@/lib/responses";
 import { prisma } from "../../lib/prisma";
 import authService from "./auth.service";
 import emailService from "../../lib/email/email.service";
 import { OtpRequest, OtpVerification, OtpResponse } from "./auth.types";
-import { ValidationError } from "../../lib/http";
 
 class OtpService {
   private readonly OTP_EXPIRATION_MINUTES = 15;
@@ -48,13 +48,16 @@ class OtpService {
     });
 
     if (!otpRecord) {
-      throw new ValidationError("Verification code is invalid or expired", {
-        code: "INVALID_CODE",
-      });
+      throw createError.UnprocessableEntity(
+        "Verification code is invalid or expired",
+        {
+          code: "INVALID_CODE",
+        }
+      );
     }
 
     if (otpRecord.attempts >= 5) {
-      throw new ValidationError("Too many failed attempts", {
+      throw createError.UnprocessableEntity("Too many failed attempts", {
         code: "MAX_ATTEMPTS",
       });
     }

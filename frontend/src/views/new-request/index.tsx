@@ -11,7 +11,7 @@ import {
 import ErrorBanner from "@/components/error-banner";
 import { useGetMeQuery } from "@/modules/customers/customers.api";
 import type { ApiCustomerLocation } from "@/modules/customers/customers.api";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { HelpCircle } from "lucide-react";
 import {
   Popover,
@@ -33,7 +33,6 @@ import { useRouteDates } from "@/hooks/use-route-dates";
 import { Textarea } from "@/components/ui/textarea";
 import { useEffect } from "react";
 import { useIsMobile } from "../../../hooks/use-mobile";
-import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   pickupRequestCreateInputSchema,
@@ -41,8 +40,6 @@ import {
   dateToBusinessDate,
   fromBusinessDateToDate,
 } from "magnoli-types";
-import { Label } from "@/components/ui/label";
-import dayjs from "dayjs";
 
 export default function NewRequestPage() {
   const [createPickupRequest, { isLoading: isCreating }] =
@@ -74,8 +71,6 @@ export default function NewRequestPage() {
         notes: "",
         pickupPartOfDay: "AM",
         dropoffPartOfDay: "PM",
-        isRecurring: false,
-        recurringStopDate: undefined,
       },
     },
     mode: "onChange",
@@ -86,7 +81,7 @@ export default function NewRequestPage() {
     handleSubmit,
     setValue,
     watch,
-    formState: { isSubmitting, isSubmitted },
+    formState: { isSubmitting },
   } = form;
 
   // Restore form values if coming back from onboarding
@@ -117,14 +112,6 @@ export default function NewRequestPage() {
     : undefined;
   const pickupPartOfDay = watch("metadata.pickupPartOfDay");
   const dropoffPartOfDay = watch("metadata.dropoffPartOfDay");
-  const isRecurring = watch("metadata.isRecurring");
-  const recurringStopDateStr = watch("metadata.recurringStopDate") as
-    | string
-    | undefined
-    | null;
-  const recurringEndDate = recurringStopDateStr
-    ? (fromBusinessDateToDate(recurringStopDateStr) as Date)
-    : undefined;
 
   // Note: New API doesn't provide location data, so address is never complete from customer profile
   const addressComplete = Boolean(
@@ -173,19 +160,20 @@ export default function NewRequestPage() {
   const onValidSubmit: SubmitHandler<PickupRequestCreateInput> = async (
     values
   ) => {
-    // Validate recurring pickup has stop date
-    if (values.metadata?.isRecurring && !values.metadata?.recurringStopDate) {
-      return; // Prevent submission if recurring is enabled but no stop date
-    }
+    try {
+      const response = await createPickupRequest(values).unwrap();
 
-    const response = await createPickupRequest(values).unwrap();
+      // Response structure: { status: 'success', data: { id: '...', ...pickupRequest } }
+      const pickupRequestId = response.data?.id;
 
-    const orderId = response.data?.pickupRequest.id;
-
-    if (orderId) {
-      navigate(`/success/${orderId}`);
-    } else {
-      navigate("/orders");
+      if (pickupRequestId) {
+        navigate(`/success/${pickupRequestId}`);
+      } else {
+        navigate("/orders");
+      }
+    } catch (error) {
+      // Error handling is done by ErrorBanner component
+      console.error("Failed to create pickup request:", error);
     }
   };
 
@@ -237,40 +225,50 @@ export default function NewRequestPage() {
                 <div className="space-y-4">
                   {hasRoutes ? (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-4 gap-5 w-full">
-                        <FormField
-                          control={control}
-                          name="routeId"
-                          render={({ field }) => (
-                            <FormItem className="col-span-4">
-                              <FormLabel>Route</FormLabel>
-                              <Select
-                                value={(field.value as string) ?? ""}
-                                onValueChange={(val) => {
-                                  field.onChange(val);
-                                  onRouteChange();
-                                }}
-                              >
-                                <FormControl>
-                                  <SelectTrigger
-                                    size={isMobile ? "sm" : "default"}
-                                    className="w-full"
-                                  >
-                                    <SelectValue placeholder="Choose route" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {routes.map((r) => (
-                                    <SelectItem key={r.id} value={r.id}>
-                                      {r.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormItem>
-                          )}
-                        />
+                      {/* Show route selector when multiple routes exist */}
+                      {routes.length > 1 && (
+                        <div className="grid grid-cols-4 gap-5 w-full">
+                          <FormField
+                            control={control}
+                            name="routeId"
+                            render={({ field }) => (
+                              <FormItem className="col-span-4">
+                                <FormLabel>Route <span className="text-muted-foreground text-sm font-normal">(required)</span></FormLabel>
+                                <Select
+                                  value={(field.value as string) ?? ""}
+                                  onValueChange={(val) => {
+                                    field.onChange(val);
+                                    onRouteChange();
+                                  }}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger
+                                      size={isMobile ? "sm" : "default"}
+                                      className="w-full"
+                                    >
+                                      <SelectValue placeholder="Choose route" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {routes.map((r) => {
+                                      const cruiseTime = r.pricelist?.slaDays 
+                                        ? `${r.pricelist.slaDays} day${r.pricelist.slaDays !== 1 ? 's' : ''} cruise`
+                                        : `${r.startTime} - ${r.endTime}`;
+                                      return (
+                                        <SelectItem key={r.id} value={r.id}>
+                                          {r.name} ({cruiseTime})
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
 
+                      <div className="grid grid-cols-4 gap-5 w-full">
                         <div className=" col-span-4 space-y-2 sm:col-span-2">
                           <div className="flex items-center gap-1">
                             <FormLabel>Pickup Date</FormLabel>
@@ -312,7 +310,7 @@ export default function NewRequestPage() {
                                     }}
                                     size={isMobile ? "sm" : "lg"}
                                     disabledDays={routePickupDisabledDays}
-                                    disableDate={!routeId}
+                                    disableDate={routes.length > 1 && !routeId}
                                     withPartOfDay
                                     partOfDay={
                                       pickupPartOfDay as "AM" | "PM" | undefined
@@ -374,7 +372,7 @@ export default function NewRequestPage() {
                                     }}
                                     size={isMobile ? "sm" : "lg"}
                                     disabledDays={routeDropOffDisabledDays}
-                                    disableDate={!routeId}
+                                    disableDate={routes.length > 1 && !routeId}
                                     withPartOfDay
                                     partOfDay={
                                       dropoffPartOfDay as
@@ -396,91 +394,6 @@ export default function NewRequestPage() {
                               </FormItem>
                             )}
                           />
-                        </div>
-
-                        {/* Recurring Pickup Section */}
-                        <div className="col-span-4 space-y-2">
-                          <FormField
-                            control={control}
-                            name="metadata.isRecurring"
-                            render={({ field }) => (
-                              <FormItem>
-                                <div className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Checkbox
-                                      id="recurring-checkbox"
-                                      checked={field.value as boolean}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <Label htmlFor="recurring-checkbox">
-                                    Make this a recurring pickup
-                                  </Label>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-
-                          <AnimatePresence>
-                            {isRecurring && (
-                              <motion.div
-                                key="recurring-pickup"
-                                variants={{
-                                  visible: {
-                                    opacity: 1,
-                                    height: "auto",
-                                  },
-                                  hidden: {
-                                    opacity: 0,
-                                    height: 0,
-                                  },
-                                }}
-                                initial="hidden"
-                                animate="visible"
-                                exit="hidden"
-                                transition={{
-                                  duration: 0.2,
-                                }}
-                                className="space-y-3"
-                              >
-                                <div className="space-y-1">
-                                  <div className="text-muted-foreground leading-relaxed">
-                                    Recurring starts every{" "}
-                                    <span className="font-semibold text-foreground">
-                                      {pickupDate
-                                        ? dayjs(pickupDate).format("dddd")
-                                        : "selected pickup date"}
-                                    </span>{" "}
-                                    and ending on{" "}
-                                    <DatePicker
-                                      value={recurringEndDate}
-                                      onChange={(d) => {
-                                        const next = d
-                                          ? dateToBusinessDate(d)
-                                          : undefined;
-                                        setValue(
-                                          "metadata.recurringStopDate",
-                                          next as never,
-                                          { shouldValidate: true }
-                                        );
-                                      }}
-                                      variant="text"
-                                      disabledDays={(date) => {
-                                        if (!pickupDate) return true;
-                                        return date <= pickupDate;
-                                      }}
-                                    />
-                                  </div>
-                                  {isSubmitted && !recurringEndDate && (
-                                    <p className="text-destructive">
-                                      Please select an end date for recurring
-                                      pickups
-                                    </p>
-                                  )}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </div>
 
                         <div className="col-span-4 space-y-2">
@@ -636,91 +549,6 @@ export default function NewRequestPage() {
                               </FormItem>
                             )}
                           />
-                        </div>
-
-                        {/* Recurring Pickup Section */}
-                        <div className="col-span-4 space-y-2">
-                          <FormField
-                            control={control}
-                            name="metadata.isRecurring"
-                            render={({ field }) => (
-                              <FormItem>
-                                <div className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Checkbox
-                                      id="recurring-checkbox-no-route"
-                                      checked={field.value as boolean}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <Label htmlFor="recurring-checkbox-no-route">
-                                    Make this a recurring pickup
-                                  </Label>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-
-                          <AnimatePresence>
-                            {isRecurring && (
-                              <motion.div
-                                key="recurring-pickup-no-route"
-                                variants={{
-                                  visible: {
-                                    opacity: 1,
-                                    height: "auto",
-                                  },
-                                  hidden: {
-                                    opacity: 0,
-                                    height: 0,
-                                  },
-                                }}
-                                initial="hidden"
-                                animate="visible"
-                                exit="hidden"
-                                transition={{
-                                  duration: 0.2,
-                                }}
-                                className="space-y-3"
-                              >
-                                <div className="space-y-1">
-                                  <div className="text-muted-foreground leading-relaxed">
-                                    Recurring starts every{" "}
-                                    <span className="font-semibold text-foreground">
-                                      {pickupDate
-                                        ? dayjs(pickupDate).format("dddd")
-                                        : "selected pickup date"}
-                                    </span>{" "}
-                                    and ending on{" "}
-                                    <DatePicker
-                                      value={recurringEndDate}
-                                      onChange={(d) => {
-                                        const next = d
-                                          ? dateToBusinessDate(d)
-                                          : undefined;
-                                        setValue(
-                                          "metadata.recurringStopDate",
-                                          next as never,
-                                          { shouldValidate: true }
-                                        );
-                                      }}
-                                      variant="text"
-                                      disabledDays={(date) => {
-                                        if (!pickupDate) return true;
-                                        return date <= pickupDate;
-                                      }}
-                                    />
-                                  </div>
-                                  {isSubmitted && !recurringEndDate && (
-                                    <p className="text-xs text-destructive">
-                                      Please select an end date for recurring
-                                      pickups
-                                    </p>
-                                  )}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </div>
 
                         <div className="col-span-4 space-y-2">

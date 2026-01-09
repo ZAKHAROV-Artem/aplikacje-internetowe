@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   useGetOrdersQuery,
@@ -30,9 +30,33 @@ export default function AdminDashboard() {
   const { pagination, goToPage, nextPage, previousPage, resetPagination } =
     useOrderPagination(20);
 
+  // Track filter state at component level to determine query params
+  const [filterStateForQuery, setFilterStateForQuery] = useState({
+    user: "all",
+    status: "all",
+    pickupDateRange: undefined as { from: Date | undefined; to: Date | undefined } | undefined,
+    dropoffDateRange: undefined as { from: Date | undefined; to: Date | undefined } | undefined,
+    search: "",
+  });
+
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filterStateForQuery.user !== "all" ||
+      filterStateForQuery.status !== "all" ||
+      filterStateForQuery.pickupDateRange?.from !== undefined ||
+      filterStateForQuery.pickupDateRange?.to !== undefined ||
+      filterStateForQuery.dropoffDateRange?.from !== undefined ||
+      filterStateForQuery.dropoffDateRange?.to !== undefined ||
+      (filterStateForQuery.search && filterStateForQuery.search.trim() !== "")
+    );
+  }, [filterStateForQuery]);
+
+  // When filters are active, fetch all orders (use a very large limit)
+  // When no filters, use server-side pagination
   const { data: ordersResponse, isLoading } = useGetOrdersQuery({
-    page: pagination.page,
-    limit: pagination.limit,
+    page: hasActiveFilters ? 1 : pagination.page,
+    limit: hasActiveFilters ? 10000 : pagination.limit, // Fetch all when filtering
   });
 
   const [bulkUpdateStatus, { isLoading: isUpdating }] =
@@ -68,27 +92,68 @@ export default function AdminDashboard() {
   const userRole = (me as { role?: string })?.role;
   const isAdmin = userRole === "ADMIN" || userRole === "COMPANY_MANAGER";
 
-  // Custom hooks
+  // Initialize filters hook with the fetched orders
   const {
     filters,
     uniqueUsers,
     filteredOrders,
-    handleFilterChange,
-    clearFilters,
+    handleFilterChange: originalHandleFilterChange,
+    clearFilters: originalClearFilters,
   } = useDashboardFilters(orders);
 
-  // Note: We're doing client-side grouping but using server pagination metadata
+  // Sync filter state for query determination
+  useEffect(() => {
+    setFilterStateForQuery({
+      user: filters.user,
+      status: filters.status,
+      pickupDateRange: filters.pickupDateRange,
+      dropoffDateRange: filters.dropoffDateRange,
+      search: filters.search,
+    });
+  }, [filters]);
 
-  // Group orders by date
+  // Wrap handleFilterChange to sync filter state
+  const handleFilterChange = <K extends keyof typeof filters>(
+    key: K,
+    value: (typeof filters)[K]
+  ) => {
+    originalHandleFilterChange(key, value);
+  };
+
+  // Wrap clearFilters
+  const clearFilters = () => {
+    originalClearFilters();
+  };
+
+  // Apply client-side pagination to filtered orders when filters are active
+  const paginatedFilteredOrders = useMemo(() => {
+    if (!hasActiveFilters) {
+      return filteredOrders; // Use all filtered orders (server already paginated)
+    }
+    // Apply client-side pagination to filtered results
+    const startIndex = (pagination.page - 1) * pagination.limit;
+    const endIndex = startIndex + pagination.limit;
+    return filteredOrders.slice(startIndex, endIndex);
+  }, [filteredOrders, pagination.page, pagination.limit, hasActiveFilters]);
+
+  // Group orders by date (use paginated filtered orders when filters are active)
+  const ordersToGroup = hasActiveFilters ? paginatedFilteredOrders : filteredOrders;
   const { groupedOrders, expandedGroups, toggleGroup } =
-    useOrderGrouping(filteredOrders);
+    useOrderGrouping(ordersToGroup);
 
   // Show all groups from the current page of orders
   const allGroups = Object.entries(groupedOrders);
   const paginatedGroups = allGroups;
 
-  // Use server metadata for pagination
-  const totalPages = ordersResponse?.data?.meta?.totalPages || 1;
+  // Calculate totalPages based on whether filters are active
+  const totalPages = useMemo(() => {
+    if (hasActiveFilters) {
+      // When filtering, calculate pages based on filtered results
+      return Math.max(1, Math.ceil(filteredOrders.length / pagination.limit));
+    }
+    // When no filters, use server metadata
+    return ordersResponse?.data?.meta?.totalPages || 1;
+  }, [hasActiveFilters, filteredOrders.length, pagination.limit, ordersResponse?.data?.meta?.totalPages]);
 
   const {
     selectedOrders,

@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 
-import { UnauthorizedError } from "../lib/http";
+import { createError } from "@/lib/responses";
 import { NextFunction, Request, Response } from "express";
 
 export type AuthenticatedController<TReq = {}, TRes = unknown> = (
@@ -28,7 +28,7 @@ export type ControllerRequest<T = {}> = Request<
 
 export type ControllerResponse<T = unknown> = Response<T>;
 
-export const controllerHandler2 = <TReq = {}, TRes = unknown>(
+export const controllerHandler = <TReq = {}, TRes = unknown>(
   fn: Controller<TReq, TRes>
 ): RequestHandler => {
   return async (req, res, next) => {
@@ -40,13 +40,13 @@ export const controllerHandler2 = <TReq = {}, TRes = unknown>(
   };
 };
 
-export const authenticatedControllerHandler2 = <TReq = {}, TRes = unknown>(
+export const authenticatedControllerHandler = <TReq = {}, TRes = unknown>(
   fn: AuthenticatedController<TReq, TRes>
 ): RequestHandler => {
   return async (req, res, next) => {
     try {
       if (!req.user) {
-        throw new UnauthorizedError("Authentication required");
+        throw createError.Unauthorized("Authentication required");
       }
       await fn(req as AuthenticatedRequest<TReq>, res, next);
     } catch (error) {

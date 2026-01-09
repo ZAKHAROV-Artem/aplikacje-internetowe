@@ -6,7 +6,6 @@ import ErrorBanner from "@/components/error-banner";
 import { useGetOrdersQuery } from "@/modules/pickup-requests/pickup-requests.api";
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import type { SerializedError } from "@reduxjs/toolkit";
-import type { CrmOrderRecord } from "magnoli-types";
 import { Package, Plus } from "lucide-react";
 import dayjs from "dayjs";
 import { motion } from "motion/react";
@@ -83,44 +82,92 @@ const EmptyState = () => (
   </div>
 );
 
-const OrderCard = ({ record }: { record: CrmOrderRecord }) => {
-  // For now, we'll display pickup requests. In the future, we can handle orders and drop-off requests
-  const displayData = record.pickupRequest;
-  if (!displayData) return null;
+// Type for backend response with includes
+type PickupRequestWithRelations = {
+  id: string;
+  userId: string;
+  routeId: string | null;
+  companyId: string;
+  locationId: string | null;
+  status: string;
+  pickupDate: Date | string;
+  dropoffDate: Date | string;
+  notes: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+  route?: {
+    id: string;
+    name: string;
+  } | null;
+  company?: {
+    id: string;
+    name: string;
+  } | null;
+  location?: {
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+  } | null;
+};
+
+const OrderCard = ({ pickupRequest }: { pickupRequest: PickupRequestWithRelations }) => {
+  if (!pickupRequest) return null;
+
+  const location = pickupRequest.location;
+  const user = pickupRequest.user;
 
   return (
     <Card className="hover:shadow-lg transition-all duration-300 active:scale-[0.98] border-0 shadow-sm bg-card">
       <CardContent className="p-4">
-        <Link to={`/orders/${record.id}`} className="block">
+        <Link to={`/orders/${pickupRequest.id}`} className="block">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-foreground truncate">
-                {record.address?.name ||
-                  `${record.customer?.firstName ?? ""} ${
-                    record.customer?.lastName ?? ""
-                  }`.trim() ||
+                {location?.name ||
+                  `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() ||
                   "Pickup request"}
               </h3>
               <div className="flex items-center mt-1 gap-2">
                 <div className="text-xs text-muted-foreground truncate">
-                  {record.address
-                    ? `${record.address.city}, ${record.address.state}`
+                  {location
+                    ? `${location.city}, ${location.state}`
                     : "—"}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Created: {formatDate(displayData.updatedAt)}
+                  Created: {formatDate(
+                    pickupRequest.createdAt 
+                      ? (typeof pickupRequest.createdAt === 'string' 
+                          ? pickupRequest.createdAt 
+                          : pickupRequest.createdAt.toString())
+                      : undefined
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Drop-off: {formatDate(displayData.dueDate || undefined)}
+                  Drop-off: {formatDate(
+                    pickupRequest.dropoffDate 
+                      ? (typeof pickupRequest.dropoffDate === 'string' 
+                          ? pickupRequest.dropoffDate 
+                          : pickupRequest.dropoffDate.toString())
+                      : undefined
+                  )}
                 </div>
               </div>
             </div>
             <Badge
               className={`${getStatusColor(
-                displayData.status
+                pickupRequest.status
               )} flex-shrink-0 ml-3`}
             >
-              {displayData.status || "pending"}
+              {pickupRequest.status || "pending"}
             </Badge>
           </div>
         </Link>
@@ -134,8 +181,8 @@ export default function OrdersPage() {
     data: ordersResponse,
     isFetching: loading,
     error,
-  } = useGetOrdersQuery();
-  const items = ordersResponse?.data?.records ?? [];
+  } = useGetOrdersQuery({});
+  const items = ordersResponse?.data?.data ?? [];
 
   const errorText = (() => {
     const e = error as FetchBaseQueryError | SerializedError | undefined;
@@ -190,8 +237,8 @@ export default function OrdersPage() {
               </p>
             </div>
             <div className="space-y-2">
-              {items.map((record) => (
-                <OrderCard key={record.id} record={record} />
+              {items.map((pickupRequest) => (
+                <OrderCard key={pickupRequest.id} pickupRequest={pickupRequest} />
               ))}
             </div>
           </>

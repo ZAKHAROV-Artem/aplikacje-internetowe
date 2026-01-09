@@ -1,15 +1,10 @@
+import { createError } from "@/lib/responses";
 import passport from "passport";
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
-import { ForbiddenError } from "../../lib/http";
 
 const options = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
   secretOrKey: process.env.JWT_ACCESS_SECRET || "fallback-secret",
-  ignoreExpiration: false,
-};
-const serviceOptions = {
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.SERVICE_AUTH_SECRET || "fallback-secret",
   ignoreExpiration: false,
 };
 
@@ -28,11 +23,14 @@ passport.use(
 );
 
 passport.use(
-  "hq",
+  "jwtAdmin",
   new JwtStrategy(options, async (jwtPayload: any, done: any) => {
     try {
-      if (jwtPayload.appType !== "hq") {
-        return done(new ForbiddenError("HQ access required"), false);
+      if (!jwtPayload?.sub || !jwtPayload?.email || !jwtPayload?.role) {
+        return done(null, false);
+      }
+      if (jwtPayload.role !== "ADMIN") {
+        return done(createError.Forbidden("Admin access required"), false);
       }
       return done(null, jwtPayload);
     } catch (error) {
@@ -42,9 +40,22 @@ passport.use(
 );
 
 passport.use(
-  "service",
-  new JwtStrategy(serviceOptions, async (jwtPayload: any, done: any) => {
+  "jwtManager",
+  new JwtStrategy(options, async (jwtPayload: any, done: any) => {
     try {
+      if (!jwtPayload?.sub || !jwtPayload?.email || !jwtPayload?.role) {
+        return done(null, false);
+      }
+      // Allow ADMIN and COMPANY_MANAGER roles
+      if (
+        jwtPayload.role !== "ADMIN" &&
+        jwtPayload.role !== "COMPANY_MANAGER"
+      ) {
+        return done(
+          createError.Forbidden("Admin or Manager access required"),
+          false
+        );
+      }
       return done(null, jwtPayload);
     } catch (error) {
       return done(error, false);

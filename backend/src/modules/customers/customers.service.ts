@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma";
-import { NotFoundError, RequiredFieldError } from "../../lib/http";
+import { createError } from "@/lib/responses";
 import locationsService from "../locations/locations.service";
 
 // Interface matching internal User model
@@ -18,7 +18,7 @@ interface Customer {
 class CustomersService {
   async upsertByEmail(email: string) {
     if (!email || typeof email !== "string") {
-      throw new RequiredFieldError("email");
+      throw createError.BadRequest("email is required");
     }
 
     // Check if user exists
@@ -53,7 +53,7 @@ class CustomersService {
 
   async getById(id: string) {
     if (!id || typeof id !== "string") {
-      throw new RequiredFieldError("id");
+      throw createError.BadRequest("id is required");
     }
 
     const user = await prisma.user.findUnique({
@@ -66,7 +66,7 @@ class CustomersService {
     });
 
     if (!user) {
-      throw new NotFoundError("Customer not found", { id });
+      throw createError.NotFound("Customer not found", { id });
     }
 
     // Add metadata field for frontend compatibility

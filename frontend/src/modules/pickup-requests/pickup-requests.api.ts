@@ -2,7 +2,6 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "@/api/baseQuery";
 import type {
   ApiResponse,
-  CreatePickupRequestResponse,
   CrmOrdersResponse,
   PickupRequest,
   PickupRequestCreateInput,
@@ -16,7 +15,41 @@ export const ordersApi = createApi({
   endpoints: (builder) => ({
     getOrders: builder.query<
       ApiResponse<{
-        data: any[];
+        data: Array<{
+          id: string;
+          userId: string;
+          routeId: string | null;
+          companyId: string;
+          locationId: string | null;
+          status: string;
+          pickupDate: Date | string;
+          dropoffDate: Date | string;
+          notes: string | null;
+          createdAt: Date | string;
+          updatedAt: Date | string;
+          user?: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+          } | null;
+          route?: {
+            id: string;
+            name: string;
+          } | null;
+          company?: {
+            id: string;
+            name: string;
+          } | null;
+          location?: {
+            id: string;
+            name: string;
+            address: string;
+            city: string;
+            state: string;
+            zip: string;
+          } | null;
+        }>;
         meta: {
           page: number;
           limit: number;
@@ -26,13 +59,13 @@ export const ordersApi = createApi({
       }>,
       { page?: number; limit?: number }
     >({
-      query: ({ page = 1, limit = 10 }) => ({
+      query: ({ page = 1, limit = 10 } = {}) => ({
         url: `/pickups?page=${page}&limit=${limit}`,
         method: "GET",
       }),
       providesTags: (result) => [
         { type: "Orders", id: "LIST" },
-        ...(result?.data?.data ?? []).map((record: any) => ({
+        ...(result?.data?.data ?? []).map((record) => ({
           type: "Orders" as const,
           id: record.id,
         })),
@@ -47,7 +80,41 @@ export const ordersApi = createApi({
       providesTags: (_result, _error, id) => [{ type: "Orders", id }],
     }),
     createPickupRequest: builder.mutation<
-      ApiResponse<CreatePickupRequestResponse["data"]>,
+      ApiResponse<{
+        id: string;
+        userId: string;
+        routeId: string | null;
+        companyId: string;
+        locationId: string | null;
+        status: string;
+        pickupDate: Date | string;
+        dropoffDate: Date | string;
+        notes: string | null;
+        createdAt: Date | string;
+        updatedAt: Date | string;
+        user?: {
+          id: string;
+          firstName: string;
+          lastName: string;
+          email: string;
+        } | null;
+        route?: {
+          id: string;
+          name: string;
+        } | null;
+        company?: {
+          id: string;
+          name: string;
+        } | null;
+        location?: {
+          id: string;
+          name: string;
+          address: string;
+          city: string;
+          state: string;
+          zip: string;
+        } | null;
+      }>,
       PickupRequestCreateInput
     >({
       query: (body) => {
@@ -109,7 +176,7 @@ export const ordersApi = createApi({
         headers: { "Content-Type": "application/json" },
         body: { status },
       }),
-      invalidatesTags: (_result, _error, id) => [
+      invalidatesTags: (_result, _error, { id }) => [
         { type: "Orders", id: "LIST" },
         { type: "Orders", id },
       ],

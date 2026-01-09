@@ -6,6 +6,7 @@ export interface Company {
   id: string;
   name: string;
   description: string | null;
+  logo: string | null;
   managerId: string;
   isActive: boolean;
   createdAt: string;
@@ -15,6 +16,7 @@ export interface Company {
 export interface UpdateCompanyInput {
   name?: string;
   description?: string;
+  logo?: string | null;
 }
 
 export const companiesApi = createApi({

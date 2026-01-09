@@ -18,6 +18,11 @@ export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
+export const passwordLoginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, "Password is required"),
+});
+
 // Route parameter schemas
 export const idParamSchema = z.object({
   id: uuidSchema,

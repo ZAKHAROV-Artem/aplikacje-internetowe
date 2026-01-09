@@ -7,6 +7,7 @@ import {
   otpRequestSchema,
   otpVerificationSchema,
   refreshTokenSchema,
+  passwordLoginSchema,
 } from "../../lib/validation";
 import {
   authLimiter,
@@ -41,6 +42,13 @@ router.post(
   otpCheckLimiter,
   validate({ body: otpVerificationSchema }),
   authController.otpCheck
+);
+
+router.post(
+  "/password/login",
+  authLimiter,
+  validate({ body: passwordLoginSchema }),
+  authController.passwordLogin
 );
 
 export { router as authRouter };

@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import bcrypt from "bcryptjs";
 import { CreateUserInput, UpdateUserInput, UserResponse } from "./users.types";
-import { NotFoundError } from "../../lib/http";
+import { createError } from "@/lib/responses";
 
 class UsersService {
   async create(data: CreateUserInput): Promise<UserResponse> {
@@ -32,7 +32,7 @@ class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundError("User not found", { userId: id });
+      throw createError.NotFound("User not found", { userId: id });
     }
 
     return this.mapToResponse(user);

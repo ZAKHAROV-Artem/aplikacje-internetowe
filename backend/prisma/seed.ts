@@ -114,115 +114,211 @@ const states = ["NY", "CA", "IL", "TX", "AZ", "PA", "TX", "CA", "TX", "CA"];
 async function main() {
   console.log("Seeding database with comprehensive data...");
 
-  // Create admin user
-  const adminEmail = "szakharovartem@gmail.com";
-  const adminPassword = "Admin123!";
-  const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
+  const commonPassword = "123456";
+  const hashedCommonPassword = await bcrypt.hash(commonPassword, 10);
 
+  // Create admin user - can manage everything
+  const adminEmail = "admin@mail.com";
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {
       email: adminEmail,
-      password: hashedAdminPassword,
-      firstName: "Artem",
-      lastName: "Zakharov",
+      password: hashedCommonPassword,
+      firstName: "Admin",
+      lastName: "User",
       role: "ADMIN",
     },
     create: {
       email: adminEmail,
-      password: hashedAdminPassword,
-      firstName: "Artem",
-      lastName: "Zakharov",
+      password: hashedCommonPassword,
+      firstName: "Admin",
+      lastName: "User",
       role: "ADMIN",
     },
   });
 
   console.log("Admin user created:", admin.email);
-  console.log("Admin password:", adminPassword);
 
-  // Create companies with managers
-  const companies: any[] = [];
-  const managers: any[] = [];
+  // Create second admin user
+  const admin2Email = "szakharovartem@gmail.com";
+  const admin2 = await prisma.user.upsert({
+    where: { email: admin2Email },
+    update: {
+      email: admin2Email,
+      password: hashedCommonPassword,
+      firstName: "Artem",
+      lastName: "Szakharov",
+      role: "ADMIN",
+    },
+    create: {
+      email: admin2Email,
+      password: hashedCommonPassword,
+      firstName: "Artem",
+      lastName: "Szakharov",
+      role: "ADMIN",
+    },
+  });
 
-  for (let i = 0; i < companyNames.length; i++) {
-    const companyName = companyNames[i];
-    const managerName = realNames[i];
-    const managerEmail = `manager${i + 1}@${companyName
-      .toLowerCase()
-      .replace(/\s+/g, "")}.com`;
-    const hashedManagerPassword = await bcrypt.hash("Manager123!", 10);
+  console.log("Second admin user created:", admin2.email);
 
-    // Create company manager first
-    const manager = await prisma.user.upsert({
-      where: { email: managerEmail },
-      update: {
-        email: managerEmail,
-        password: hashedManagerPassword,
-        firstName: managerName.firstName,
-        lastName: managerName.lastName,
-        role: "COMPANY_MANAGER",
-      },
-      create: {
-        email: managerEmail,
-        password: hashedManagerPassword,
-        firstName: managerName.firstName,
-        lastName: managerName.lastName,
-        role: "COMPANY_MANAGER",
+  // Create manager user first (needed for company creation)
+  const managerEmail = "manager@mail.com";
+  const manager = await prisma.user.upsert({
+    where: { email: managerEmail },
+    update: {
+      email: managerEmail,
+      password: hashedCommonPassword,
+      firstName: "Manager",
+      lastName: "User",
+      role: "COMPANY_MANAGER",
+    },
+    create: {
+      email: managerEmail,
+      password: hashedCommonPassword,
+      firstName: "Manager",
+      lastName: "User",
+      role: "COMPANY_MANAGER",
+    },
+  });
+
+  // Create company for manager
+  const companyName = companyNames[0];
+  const company = await prisma.company.upsert({
+    where: { name: companyName },
+    update: {
+      name: companyName,
+      description: `${companyName} - Professional delivery and logistics services`,
+      managerId: manager.id,
+    },
+    create: {
+      name: companyName,
+      description: `${companyName} - Professional delivery and logistics services`,
+      managerId: manager.id,
+    },
+  });
+
+  // Update admin users with companyId so they can create pickup requests
+  await prisma.user.update({
+    where: { id: admin.id },
+    data: {
+      companyId: company.id,
+    },
+  });
+
+  await prisma.user.update({
+    where: { id: admin2.id },
+    data: {
+      companyId: company.id,
+    },
+  });
+
+  // Update manager with companyId so they can create pickup requests
+  await prisma.user.update({
+    where: { id: manager.id },
+    data: {
+      companyId: company.id,
+    },
+  });
+
+  console.log("Manager user created:", manager.email);
+
+  console.log(
+    `Company created: ${company.name} with manager: ${manager.email}`
+  );
+
+  // Create location for admin user
+  const existingAdminLocation = await prisma.location.findFirst({
+    where: {
+      userId: admin.id,
+      name: "Home",
+    },
+  });
+
+  if (existingAdminLocation) {
+    await prisma.location.update({
+      where: { id: existingAdminLocation.id },
+      data: {
+        address: addresses[0],
+        city: cities[0],
+        state: states[0],
+        zip: zipCodes[0],
+        isDefault: true,
       },
     });
-
-    managers.push(manager);
-
-    // Create company
-    const company = await prisma.company.upsert({
-      where: { name: companyName },
-      update: {
-        name: companyName,
-        description: `${companyName} - Professional delivery and logistics services`,
-        managerId: manager.id,
-      },
-      create: {
-        name: companyName,
-        description: `${companyName} - Professional delivery and logistics services`,
-        managerId: manager.id,
+  } else {
+    await prisma.location.create({
+      data: {
+        userId: admin.id,
+        name: "Home",
+        address: addresses[0],
+        city: cities[0],
+        state: states[0],
+        zip: zipCodes[0],
+        isDefault: true,
       },
     });
-
-    companies.push(company);
-    console.log(
-      `Company created: ${company.name} with manager: ${manager.email}`
-    );
   }
 
-  // Create regular users (clients) for the company
+  // Create location for manager user
+  const existingManagerLocation = await prisma.location.findFirst({
+    where: {
+      userId: manager.id,
+      name: "Home",
+    },
+  });
+
+  if (existingManagerLocation) {
+    await prisma.location.update({
+      where: { id: existingManagerLocation.id },
+      data: {
+        address: addresses[1],
+        city: cities[1],
+        state: states[1],
+        zip: zipCodes[1],
+        isDefault: true,
+      },
+    });
+  } else {
+    await prisma.location.create({
+      data: {
+        userId: manager.id,
+        name: "Home",
+        address: addresses[1],
+        city: cities[1],
+        state: states[1],
+        zip: zipCodes[1],
+        isDefault: true,
+      },
+    });
+  }
+
+  console.log("Created locations for admin and manager users");
+
+  // Create regular users (clients) - can see only own orders, update info, new etc pages
   const users: any[] = [];
-  const userCompany = companies[0]; // Only one company
-  const totalUsers = 20; // 20 users for the single company
+  const totalUsers = 10; // 10 regular users
 
   for (let j = 0; j < totalUsers; j++) {
     const userName = realNames[j];
-    const userEmail = `user${j + 1}@${userCompany.name
-      .toLowerCase()
-      .replace(/\s+/g, "")}.com`;
-    const hashedUserPassword = await bcrypt.hash("User123!", 10);
+    const userEmail = `user${j + 1}@mail.com`;
 
     const user = await prisma.user.upsert({
       where: { email: userEmail },
       update: {
         email: userEmail,
-        password: hashedUserPassword,
+        password: hashedCommonPassword,
         firstName: userName.firstName,
         lastName: userName.lastName,
         role: "USER",
-        companyId: userCompany.id,
+        companyId: company.id,
       },
       create: {
         email: userEmail,
-        password: hashedUserPassword,
+        password: hashedCommonPassword,
         firstName: userName.firstName,
         lastName: userName.lastName,
         role: "USER",
-        companyId: userCompany.id,
+        companyId: company.id,
       },
     });
 
@@ -262,24 +358,41 @@ async function main() {
 
   // Create routes for the company
   const routes: any[] = [];
-  const routeCompany = companies[0]; // Only one company
   const numRoutes = 5; // 5 routes for the single company
+
+  // Helper function to convert minutes to AM/PM format
+  const minutesToTime = (minutes: number): string => {
+    const hours24 = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    const hour12 =
+      hours24 === 0
+        ? 12
+        : hours24 > 12
+        ? hours24 - 12
+        : hours24 === 12
+        ? 12
+        : hours24;
+    const ampm = hours24 < 12 ? "AM" : "PM";
+    return `${hour12}:${mins.toString().padStart(2, "0")} ${ampm}`;
+  };
 
   for (let j = 0; j < numRoutes; j++) {
     const routeName = routeNames[j]; // Use all route names
     const routeZipCodes = zipCodes.slice(0, Math.floor(Math.random() * 5) + 3); // 3-7 zip codes
     const routeWeekdays = weekdays.slice(0, Math.floor(Math.random() * 3) + 3); // 3-5 weekdays
-    const startTime = 480 + Math.floor(Math.random() * 240); // 8:00 AM to 12:00 PM
-    const endTime = startTime + 480 + Math.floor(Math.random() * 240); // 8-12 hours later
+    const startTimeMins = 480 + Math.floor(Math.random() * 240); // 8:00 AM to 12:00 PM
+    const endTimeMins = startTimeMins + 480 + Math.floor(Math.random() * 240); // 8-12 hours later
+    const startTime = minutesToTime(startTimeMins);
+    const endTime = minutesToTime(endTimeMins);
 
     const route = await prisma.route.create({
       data: {
-        companyId: routeCompany.id,
-        name: `${routeName} - ${routeCompany.name}`,
+        companyId: company.id,
+        name: `${routeName} - ${company.name}`,
         zipCodes: routeZipCodes,
         weekdays: routeWeekdays,
-        startTimeMins: startTime,
-        endTimeMins: endTime,
+        startTime: startTime,
+        endTime: endTime,
         active: true,
       },
     });
@@ -339,25 +452,28 @@ async function main() {
 
   // Summary
   console.log("\n=== SEEDING COMPLETED ===");
-  console.log(`Admin: ${admin.email} (password: ${adminPassword})`);
-  console.log(`Companies: ${companies.length}`);
-  console.log(`Managers: ${managers.length}`);
+  console.log(`Admins: ${admin.email}, ${admin2.email}`);
+  console.log(`Manager: ${manager.email}`);
+  console.log(`Company: ${company.name}`);
   console.log(`Users: ${users.length}`);
   console.log(`Locations: ${locations.length}`);
   console.log(`Routes: ${routes.length}`);
   console.log(`Pickup Requests: ${pickupRequests.length}`);
 
   console.log("\n=== LOGIN CREDENTIALS ===");
-  console.log("Admin:");
-  console.log(`  Email: ${admin.email}`);
-  console.log(`  Password: ${adminPassword}`);
+  console.log("All passwords are set to: 123456");
+  console.log("\nAdmins (can manage everything):");
+  console.log(`  1. Email: ${admin.email}`);
+  console.log(`  2. Email: ${admin2.email}`);
 
-  console.log("\nManager:");
-  console.log(`  Email: ${managers[0].email}, Password: Manager123!`);
+  console.log("\nManager (can manage routes only):");
+  console.log(`  Email: ${manager.email}`);
 
-  console.log("\nSample Users:");
+  console.log(
+    "\nRegular Users (can see only own orders, update info, new etc pages):"
+  );
   users.slice(0, 5).forEach((user, i) => {
-    console.log(`  ${i + 1}. Email: ${user.email}, Password: User123!`);
+    console.log(`  ${i + 1}. Email: ${user.email}`);
   });
 }
 

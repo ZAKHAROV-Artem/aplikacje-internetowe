@@ -1,5 +1,5 @@
-import { success } from "../../lib/http";
-import { controllerHandler2 } from "../../utils/controllerHandler2";
+import { success } from "../../lib/responses";
+import { controllerHandler } from "../../utils/controllerHandler";
 import usersService from "./users.service";
 import { CreateUserInput, UpdateUserInput } from "./users.types";
 import { z } from "zod";
@@ -22,56 +22,56 @@ const updateUserSchema = z.object({
 });
 
 class UsersController {
-  create = controllerHandler2<{ body: CreateUserInput }, unknown>(
+  create = controllerHandler<{ body: CreateUserInput }, unknown>(
     async (req, res) => {
       const data = createUserSchema.parse(req.body);
       const user = await usersService.create(data);
-      success(res, user);
+      res.status(201).json(success(user, "User created successfully"));
     }
   );
 
-  getById = controllerHandler2<{ params: { id: string } }, unknown>(
+  getById = controllerHandler<{ params: { id: string } }, unknown>(
     async (req, res) => {
       const user = await usersService.getById(req.params.id);
-      success(res, user);
+      res.status(200).json(success(user, "User retrieved successfully"));
     }
   );
 
-  getMe = controllerHandler2<unknown, unknown>(async (req, res) => {
+  getMe = controllerHandler<unknown, unknown>(async (req, res) => {
     const user = await usersService.getById((req as any).user?.sub || "");
-    success(res, user);
+    res.status(200).json(success(user, "User profile retrieved successfully"));
   });
 
-  update = controllerHandler2<
+  update = controllerHandler<
     { params: { id: string }; body: UpdateUserInput },
     unknown
   >(async (req, res) => {
     const data = updateUserSchema.parse(req.body);
     const user = await usersService.update(req.params.id, data);
-    success(res, user);
+    res.status(200).json(success(user, "User updated successfully"));
   });
 
-  updateMe = controllerHandler2<{ body: UpdateUserInput }, unknown>(
+  updateMe = controllerHandler<{ body: UpdateUserInput }, unknown>(
     async (req, res) => {
       const data = updateUserSchema.parse(req.body);
       const user = await usersService.update(
         (req as any).user?.sub || "",
         data
       );
-      success(res, user);
+      res.status(200).json(success(user, "User profile updated successfully"));
     }
   );
 
-  delete = controllerHandler2<{ params: { id: string } }, unknown>(
+  delete = controllerHandler<{ params: { id: string } }, unknown>(
     async (req, res) => {
       await usersService.delete(req.params.id);
-      success(res, { deleted: true });
+      res.status(200).json(success({ deleted: true }, "User deleted successfully"));
     }
   );
 
-  list = controllerHandler2<{ query: any }, unknown>(async (req, res) => {
+  list = controllerHandler<{ query: any }, unknown>(async (req, res) => {
     const users = await usersService.list(req.query);
-    success(res, users);
+    res.status(200).json(success(users, "Users retrieved successfully"));
   });
 }
 

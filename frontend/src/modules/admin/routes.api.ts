@@ -8,8 +8,8 @@ export interface AdminRoute {
   name: string;
   zipCodes: string[];
   weekdays: string[];
-  startTimeMins: number;
-  endTimeMins: number;
+  startTime: string;
+  endTime: string;
   pricelistId: string | null;
   active: boolean;
   createdAt: string;
@@ -21,8 +21,8 @@ export interface CreateRouteInput {
   name: string;
   zipCodes: string[];
   weekdays: string[];
-  startTimeMins: number;
-  endTimeMins: number;
+  startTime: string;
+  endTime: string;
   pricelistId?: string;
   active?: boolean;
 }
@@ -31,8 +31,8 @@ export interface UpdateRouteInput {
   name?: string;
   zipCodes?: string[];
   weekdays?: string[];
-  startTimeMins?: number;
-  endTimeMins?: number;
+  startTime?: string;
+  endTime?: string;
   pricelistId?: string;
   active?: boolean;
 }

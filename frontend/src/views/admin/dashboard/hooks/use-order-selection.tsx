@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import type { Order } from "../types";
 
-export function useOrderSelection(orders: Order[]) {
+export function useOrderSelection(_orders: Order[]) {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
 
   const toggleOrderSelection = useCallback((orderId: string) => {

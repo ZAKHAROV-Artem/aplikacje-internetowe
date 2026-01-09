@@ -2,8 +2,9 @@ import { Router } from "express";
 import validate from "express-zod-safe";
 import { idParamSchema, zipParamSchema } from "../../lib/validation";
 import routesService from "../pickups/routes.service";
-import routesController from "./routes.controller";
-import { success, fail } from "../../lib/http";
+import routesController, { updateRouteSchema } from "./routes.controller";
+import { success, error } from "../../lib/responses";
+import { requireManagerJWT } from "../auth/shared/require-auth";
 
 const router = Router();
 
@@ -13,32 +14,37 @@ router.get(
   validate({ params: zipParamSchema }),
   async (req, res) => {
     try {
-      const data = await routesService.getRoutesByZip(req.params.zip);
-      success(res, data);
+      const routes = await routesService.getRoutesByZip(req.params.zip);
+      res.status(200).json(success({ data: routes }, "Routes retrieved successfully"));
     } catch (err) {
-      fail(res, 500, "INTERNAL_SERVER_ERROR", "Failed to get routes by zip", {
-        message: err && (err as any).message,
-      });
+      res.status(500).json(
+        error("Failed to get routes by zip", ["INTERNAL_SERVER_ERROR"], {
+          message: err && (err as any).message,
+        })
+      );
       return;
     }
   }
 );
 
-// Protected CRUD routes
-router.post("/", routesController.create);
-router.get("/", routesController.list);
+// Protected CRUD routes - Admin and Manager only
+router.post("/", requireManagerJWT, routesController.create);
+router.get("/", requireManagerJWT, routesController.list);
 router.get(
   "/:id",
+  requireManagerJWT,
   validate({ params: idParamSchema }),
   routesController.getById
 );
 router.patch(
   "/:id",
-  validate({ params: idParamSchema }),
+  requireManagerJWT,
+  validate({ params: idParamSchema, body: updateRouteSchema }),
   routesController.update
 );
 router.delete(
   "/:id",
+  requireManagerJWT,
   validate({ params: idParamSchema }),
   routesController.delete
 );

@@ -2,6 +2,7 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "@/api/baseQuery";
 import { signOut } from "./auth.slice";
 import type { ApiResponse } from "magnoli-types";
+import { customersApi } from "@/modules/customers/customers.api";
 
 export type SendVerifyPayload = {
   to: string; // Email address
@@ -31,11 +32,22 @@ export type RefreshTokenResponse = {
 export type SignOutPayload = { refreshToken: string };
 export type SignOutResponse = { success: boolean };
 
+export type PasswordLoginPayload = {
+  email: string;
+  password: string;
+};
+
+export type PasswordLoginResponse = {
+  accessToken: string;
+  refreshToken: string;
+};
+
 // API response types
 export type SendVerifyApiResponse = ApiResponse<SendVerifyResponse>;
 export type CheckVerifyApiResponse = ApiResponse<CheckVerifyResponse>;
 export type RefreshTokenApiResponse = ApiResponse<RefreshTokenResponse>;
 export type SignOutApiResponse = ApiResponse<SignOutResponse>;
+export type PasswordLoginApiResponse = ApiResponse<PasswordLoginResponse>;
 
 export const authApi = createApi({
   reducerPath: "authApi",
@@ -78,7 +90,22 @@ export const authApi = createApi({
       async onQueryStarted(_, { queryFulfilled, dispatch }) {
         await queryFulfilled;
         dispatch(signOut());
+        // Invalidate Me query cache to clear user data immediately
+        dispatch(customersApi.util.invalidateTags(["Me"]));
+        // Reset all query caches to prevent showing old user data
+        dispatch(customersApi.util.resetApiState());
       },
+    }),
+    passwordLogin: builder.mutation<
+      PasswordLoginApiResponse,
+      PasswordLoginPayload
+    >({
+      query: (body) => ({
+        url: "/auth/password/login",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      }),
     }),
   }),
 });
@@ -88,4 +115,5 @@ export const {
   useCheckVerifyMutation,
   useRefreshTokenMutation,
   useSignOutMutation,
+  usePasswordLoginMutation,
 } = authApi;

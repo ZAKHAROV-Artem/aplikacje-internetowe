@@ -92,10 +92,7 @@ export default function AdminRoutesPage() {
                 <div>
                   <p className="text-muted-foreground">Hours</p>
                   <p>
-                    {Math.floor(route.startTimeMins / 60)}:
-                    {(route.startTimeMins % 60).toString().padStart(2, "0")} -{" "}
-                    {Math.floor(route.endTimeMins / 60)}:
-                    {(route.endTimeMins % 60).toString().padStart(2, "0")}
+                    {route.startTime} - {route.endTime}
                   </p>
                 </div>
                 <div>

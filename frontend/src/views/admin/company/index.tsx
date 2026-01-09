@@ -3,7 +3,7 @@ import {
   useGetCompanyInfoQuery,
   useUpdateCompanyMutation,
 } from "@/modules/companies/companies.api";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,14 +31,18 @@ export default function CompanyInfoPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   // Initialize form data when company data loads
-  useState(() => {
+  useEffect(() => {
     if (company) {
       setFormData({
         name: company.name || "",
         description: company.description || "",
       });
+      // Set existing logo preview if available
+      if (company.logo) {
+        setLogoPreview(company.logo);
+      }
     }
-  });
+  }, [company]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -70,7 +74,7 @@ export default function CompanyInfoPage() {
     confirm({
       title: "Remove Logo",
       description:
-        "Are you sure you want to remove the selected logo? This action cannot be undone.",
+        "Are you sure you want to remove the logo? This action cannot be undone.",
       variant: "warning",
       confirmText: "Remove Logo",
       cancelText: "Keep Logo",
@@ -80,7 +84,6 @@ export default function CompanyInfoPage() {
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
-        toast.success("Logo removed");
       },
     });
   };
@@ -94,11 +97,18 @@ export default function CompanyInfoPage() {
         description: formData.description,
       };
 
-      // If there's a new logo file, we'll need to handle file upload
-      if (logoFile) {
-        // For now, we'll just show a message that file upload needs backend implementation
-        toast.info("Logo upload functionality needs backend implementation");
-        return;
+      // If there's a logo preview (either new or existing), include it
+      // If logoPreview exists but no logoFile, it means it's the existing logo
+      // If both exist, it's a new logo (base64 from FileReader)
+      if (logoPreview && logoFile) {
+        // New logo selected - use the base64 preview (already converted)
+        updateData.logo = logoPreview;
+      } else if (logoPreview && !logoFile) {
+        // Existing logo, keep it as is
+        updateData.logo = logoPreview;
+      } else if (!logoPreview && company?.logo) {
+        // Logo was removed - set to null
+        updateData.logo = null;
       }
 
       await updateCompany({ id: company?.id || "", data: updateData }).unwrap();
@@ -141,7 +151,7 @@ export default function CompanyInfoPage() {
                   <div className="relative">
                     <img
                       src={logoPreview}
-                      alt="Logo preview"
+                      alt="Company logo"
                       className="w-24 h-24 object-contain border rounded-lg bg-muted"
                     />
                     <Button
@@ -155,11 +165,15 @@ export default function CompanyInfoPage() {
                     </Button>
                   </div>
                   <div>
-                    <p className="text-sm font-medium">New logo selected</p>
-                    <p className="text-xs text-muted-foreground">
-                      {logoFile?.name} (
-                      {(logoFile?.size || 0 / 1024 / 1024).toFixed(2)} MB)
+                    <p className="text-sm font-medium">
+                      {logoFile ? "New logo selected" : "Current logo"}
                     </p>
+                    {logoFile && (
+                      <p className="text-xs text-muted-foreground">
+                        {logoFile.name} (
+                        {(logoFile.size / 1024 / 1024).toFixed(2)} MB)
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : (

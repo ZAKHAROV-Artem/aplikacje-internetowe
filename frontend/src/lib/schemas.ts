@@ -70,6 +70,14 @@ export const phoneAuthSchema = z.object({
 });
 
 /**
+ * Password authentication form schema
+ */
+export const passwordLoginSchema = z.object({
+  email: commonSchemas.email,
+  password: z.string().min(1, "Password is required"),
+});
+
+/**
  * Onboarding form schema for user profile setup
  */
 export const onboardingSchema = z.object({
@@ -91,6 +99,17 @@ export const addressEditSchema = z.object({
   zip: commonSchemas.zip,
 });
 
+/**
+ * Update user form schema
+ */
+export const updateUserSchema = z.object({
+  firstName: commonSchemas.firstName,
+  lastName: commonSchemas.lastName,
+  role: z.enum(["ADMIN", "COMPANY_MANAGER", "USER"], {
+    required_error: "Please select a role",
+  }),
+});
+
 // ============================================================================
 // INFERRED TYPES
 // ============================================================================
@@ -100,8 +119,10 @@ export const addressEditSchema = z.object({
  */
 export type EmailAuthFormValues = z.infer<typeof emailAuthSchema>;
 export type PhoneAuthFormValues = z.infer<typeof phoneAuthSchema>;
+export type PasswordLoginFormValues = z.infer<typeof passwordLoginSchema>;
 export type OnboardingFormValues = z.infer<typeof onboardingSchema>;
 export type AddressEditFormValues = z.infer<typeof addressEditSchema>;
+export type UpdateUserFormValues = z.infer<typeof updateUserSchema>;
 
 // ============================================================================
 // API RESPONSE TYPES
@@ -425,8 +446,10 @@ export interface EventCreateInput {
 export const schemas = {
   emailAuth: emailAuthSchema,
   phoneAuth: phoneAuthSchema,
+  passwordLogin: passwordLoginSchema,
   onboarding: onboardingSchema,
   addressEdit: addressEditSchema,
+  updateUser: updateUserSchema,
 } as const;
 
 // All types are exported individually above for easy importing

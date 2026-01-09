@@ -56,8 +56,12 @@ export default function CodePage() {
       return;
     }
     try {
+      if (!loginTo) {
+        setError("Missing login info. Please go back and try again.");
+        return;
+      }
       const response = await checkVerify({
-        to: loginTo,
+        to: loginTo as string,
         code,
       }).unwrap();
       // Response is now ApiResponse<CheckVerifyResponse>
@@ -82,7 +86,7 @@ export default function CodePage() {
       setCode("");
       setError(null);
       await sendVerify({
-        to: loginTo,
+        to: loginTo as string,
       }).unwrap();
       setResendSeconds(30);
     } catch (err) {
@@ -160,7 +164,7 @@ export default function CodePage() {
               <button
                 type="button"
                 className="text-primary underline underline-offset-4 hover:text-primary/80 transition-colors"
-                onClick={() => navigate("/auth/phone")}
+                onClick={() => navigate("/auth/email")}
               >
                 Go back
               </button>

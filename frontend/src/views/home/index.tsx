@@ -12,7 +12,7 @@ import dayjs from "dayjs";
 import { motion } from "motion/react";
 
 export default function HomePage() {
-  const { data: orders, isFetching, error } = useGetOrdersQuery();
+  const { data: orders, isFetching, error } = useGetOrdersQuery({});
   const status = isFetching ? "loading" : "succeeded";
   const { data: customer } = useGetMeQuery();
 
@@ -32,19 +32,17 @@ export default function HomePage() {
 
   const firstName = customer?.data?.firstName || "there";
 
-  const records = orders?.data?.records || [];
+  const records = orders?.data?.data || [];
   const totalOrders = records.length;
 
   // Count orders by status - focusing on pickup requests since that's what we display
-  const pickupRequests = records
-    .filter((record) => record.pickupRequest)
-    .map((record) => record.pickupRequest!);
+  type OrderRecord = typeof records[0];
 
-  const pendingOrders = pickupRequests.filter(
-    (pr) => pr.status === "new" || !pr.status
+  const pendingOrders = records.filter(
+    (pr: OrderRecord) => pr.status === "new" || !pr.status
   ).length;
-  const completedOrders = pickupRequests.filter(
-    (pr) => pr.status === "completed"
+  const completedOrders = records.filter(
+    (pr: OrderRecord) => pr.status === "completed"
   ).length;
 
   // Show recent records (limit to 3)
@@ -157,9 +155,9 @@ export default function HomePage() {
           </div>
 
           <div className="space-y-2">
-            {recentRecords.map((record) => {
+            {recentRecords.map((record: OrderRecord) => {
               // For now, we'll display pickup requests. In the future, we can handle orders and drop-off requests
-              const displayData = record.pickupRequest;
+              const displayData = record;
               if (!displayData) return null;
 
               return (
@@ -172,24 +170,24 @@ export default function HomePage() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-foreground truncate">
-                            {record.address?.name ||
-                              `${record.customer?.firstName ?? ""} ${
-                                record.customer?.lastName ?? ""
+                            {record.location?.name ||
+                              `${record.user?.firstName ?? ""} ${
+                                record.user?.lastName ?? ""
                               }`.trim() ||
                               "Pickup request"}
                           </h3>
                           <div className="flex items-center mt-1 gap-2">
                             <div className="text-xs text-muted-foreground truncate">
-                              {record.address
-                                ? `${record.address.city}, ${record.address.state}`
+                              {record.location
+                                ? `${record.location.city}, ${record.location.state}`
                                 : "—"}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              Created: {formatDate(displayData.updatedAt)}
+                              Created: {formatDate(typeof displayData.createdAt === 'string' ? displayData.createdAt : displayData.createdAt?.toString())}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               Drop-off:{" "}
-                              {formatDate(displayData.dueDate || undefined)}
+                              {formatDate(typeof displayData.dropoffDate === 'string' ? displayData.dropoffDate : displayData.dropoffDate?.toString())}
                             </div>
                           </div>
                         </div>

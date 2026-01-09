@@ -6,6 +6,17 @@ import {
   type Route,
 } from "@/modules/pickup-requests/routes.api";
 
+// Map weekday strings to dayjs day numbers (0=Sunday, 1=Monday, etc.)
+const WEEKDAY_MAP: Record<string, number> = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+};
+
 type SetValue = (
   name: "routeId" | "pickupDate" | "dropoffDate",
   value: unknown,
@@ -52,10 +63,21 @@ export function useRouteDates({
     () => routes.find((r) => r.id === routeId) || null,
     [routes, routeId]
   );
-  const allowedWeekdays: number[] = selectedRoute?.weekdays ?? [];
+
+  // Convert weekday strings ("Monday", "Tuesday", etc.) to dayjs day numbers (0=Sunday, 1=Monday, etc.)
+  const allowedWeekdays: number[] = useMemo(() => {
+    if (!selectedRoute?.weekdays || selectedRoute.weekdays.length === 0) {
+      return []; // Empty array means all days are allowed
+    }
+    return selectedRoute.weekdays
+      .map((day) => WEEKDAY_MAP[day])
+      .filter((day) => day !== undefined) as number[];
+  }, [selectedRoute?.weekdays]);
+
   const slaDays: number = selectedRoute?.pricelist?.slaDays ?? 1;
   const today = dayjs().startOf("day");
 
+  const pickupTouchedRef = useRef(false);
   const dropOffTouchedRef = useRef(false);
 
   // Create dates at local noon to avoid timezone boundary issues (UTC conversions)
@@ -104,23 +126,24 @@ export function useRouteDates({
     return false;
   };
 
-  // Auto-select when exactly one route is available, but only if not already selected
-  const singleRouteId = useMemo(
-    () => (routes.length === 1 ? routes[0].id : undefined),
+  // Auto-select the first route by default when routes are available, but only if not already selected
+  const firstRouteId = useMemo(
+    () => (routes.length > 0 ? routes[0].id : undefined),
     [routes]
   );
 
   useEffect(() => {
-    if (singleRouteId && routeId !== singleRouteId) {
-      setValue("routeId", singleRouteId, {
+    if (firstRouteId && !routeId) {
+      setValue("routeId", firstRouteId, {
         shouldDirty: true,
         shouldTouch: true,
         shouldValidate: true,
       });
     }
-  }, [singleRouteId, routeId, setValue]);
+  }, [firstRouteId, routeId, setValue]);
 
   // Ensure pickup/dropoff remain valid when the selected route changes
+  // Only auto-adjust if user hasn't manually set dates
   useEffect(() => {
     if (!selectedRoute) return;
     const now = dayjs().startOf("day");
@@ -131,7 +154,8 @@ export function useRouteDates({
       p && p.isAfter(now, "day") && allowedWeekdays.includes(p.day());
     let ensuredPickup = p;
 
-    if (!pickupOk) {
+    // Only auto-adjust pickup if user hasn't manually set it
+    if (!pickupOk && !pickupTouchedRef.current) {
       // Start from tomorrow (i=1) when route is selected, not today (i=0)
       for (let i = 1; i <= 42; i++) {
         const candidate = now.add(i, "day");
@@ -154,7 +178,8 @@ export function useRouteDates({
         dayjs(dropoffDate).isAfter(pickupBase, "day") &&
         allowedWeekdays.includes(dayjs(dropoffDate).day());
 
-      if (!keepUserDropoff) {
+      // Only auto-adjust dropoff if user hasn't manually set it
+      if (!keepUserDropoff && !dropOffTouchedRef.current) {
         // Start from slaDays minimum gap
         for (let j = slaDays; j <= 42; j++) {
           const candidate = pickupBase.add(j, "day");
@@ -171,22 +196,25 @@ export function useRouteDates({
   }, [routeId, selectedRoute, allowedWeekdays.length, slaDays]);
 
   // Revalidate dates when routes are first fetched and loaded
+  // Only runs once when routes are loaded, not on every date change
   useEffect(() => {
     if (
       !routesResp.isLoading &&
       !routesResp.isFetching &&
       hasRoutes &&
-      selectedRoute
+      selectedRoute &&
+      !pickupTouchedRef.current &&
+      !dropOffTouchedRef.current
     ) {
       const now = dayjs().startOf("day");
 
       const p = pickupDate ? dayjs(pickupDate).startOf("day") : null;
       const d = dropoffDate ? dayjs(dropoffDate).startOf("day") : null;
 
-      // Revalidate pickup date
+      // Revalidate pickup date only if not manually set
       const pickupValid =
         p && p.isAfter(now, "day") && allowedWeekdays.includes(p.day());
-      if (!pickupValid && p) {
+      if (!pickupValid && p && !pickupTouchedRef.current) {
         // Find next valid pickup date
         for (let i = 1; i <= 42; i++) {
           const candidate = now.add(i, "day");
@@ -200,7 +228,7 @@ export function useRouteDates({
         }
       }
 
-      // Revalidate dropoff date
+      // Revalidate dropoff date only if not manually set
       const pickupBase = p || now.add(1, "day");
       const dropoffValid =
         d &&
@@ -208,7 +236,7 @@ export function useRouteDates({
         d.diff(pickupBase, "day") >= slaDays &&
         allowedWeekdays.includes(d.day());
 
-      if (!dropoffValid && d) {
+      if (!dropoffValid && d && !dropOffTouchedRef.current) {
         // Find next valid dropoff date
         for (let j = slaDays; j <= 42; j++) {
           const candidate = pickupBase.add(j, "day");
@@ -225,7 +253,8 @@ export function useRouteDates({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routesResp.isLoading, routesResp.isFetching, hasRoutes, selectedRoute]);
 
-  // Enforce dropoff validity whenever pickup/dropoff change under a selected route
+  // Enforce dropoff validity whenever pickup changes under a selected route
+  // Only auto-adjust dropoff if user hasn't manually set it
   useEffect(() => {
     if (!selectedRoute) return;
     const p = pickupDate ? dayjs(pickupDate).startOf("day") : null;
@@ -238,26 +267,20 @@ export function useRouteDates({
       d.diff(p, "day") >= slaDays &&
       isWeekdayAllowed(d);
 
-    if (!dropoffValid) {
+    // Only auto-adjust if dropoff is invalid AND user hasn't manually set it
+    if (!dropoffValid && !dropOffTouchedRef.current) {
       for (let j = Math.max(1, slaDays); j <= 42; j++) {
         const candidate = p.add(j, "day");
         if (isWeekdayAllowed(candidate)) {
           setValue("dropoffDate", toLocalNoon(candidate), {
             shouldDirty: true,
           });
-          dropOffTouchedRef.current = false;
           break;
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    pickupDate,
-    dropoffDate,
-    selectedRoute,
-    slaDays,
-    allowedWeekdays.join(","),
-  ]);
+  }, [pickupDate, selectedRoute, slaDays, allowedWeekdays.join(",")]);
 
   // Fallback when no route is selected/found: default to tomorrow and day after
   useEffect(() => {
@@ -285,26 +308,34 @@ export function useRouteDates({
   }, [selectedRoute, pickupDate, dropoffDate]);
 
   function onRouteChange() {
+    // Reset touched refs when route changes so dates can auto-adjust for new route
+    pickupTouchedRef.current = false;
     dropOffTouchedRef.current = false;
   }
 
   function onPickupChange(date: Date | undefined) {
+    if (date) {
+      pickupTouchedRef.current = true;
+    }
     if (!date) return;
+    // Only auto-adjust dropoff if user hasn't manually set it
     if (dropOffTouchedRef.current && isValidDropoff(dropoffDate, date)) {
       return;
     }
-    const base = dayjs(date).startOf("day");
-    // Start from slaDays minimum gap
-    for (let i = slaDays; i <= 42; i++) {
-      const candidate = base.add(i, "day");
-      if (
-        isWeekdayAllowed(candidate) &&
-        !candidate.isBefore(dayjs().startOf("day"), "day")
-      ) {
-        setValue("dropoffDate", toLocalNoon(candidate), {
-          shouldDirty: true,
-        });
-        break;
+    if (!dropOffTouchedRef.current) {
+      const base = dayjs(date).startOf("day");
+      // Start from slaDays minimum gap
+      for (let i = slaDays; i <= 42; i++) {
+        const candidate = base.add(i, "day");
+        if (
+          isWeekdayAllowed(candidate) &&
+          !candidate.isBefore(dayjs().startOf("day"), "day")
+        ) {
+          setValue("dropoffDate", toLocalNoon(candidate), {
+            shouldDirty: true,
+          });
+          break;
+        }
       }
     }
   }

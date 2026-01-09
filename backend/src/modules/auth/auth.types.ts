@@ -31,3 +31,8 @@ export interface OtpEmailRequest {
   magnoliCustomerId: string;
   code: string;
 }
+
+export interface PasswordLogin {
+  email: string;
+  password: string;
+}

@@ -1,11 +1,11 @@
-import { success } from "../../lib/http";
 import {
-  authenticatedControllerHandler2,
-  controllerHandler2,
-} from "../../utils/controllerHandler2";
+  authenticatedControllerHandler,
+  controllerHandler,
+} from "../../utils/controllerHandler";
 import companiesService from "./companies.service";
 import { CreateCompanyInput, UpdateCompanyInput } from "./companies.types";
 import { z } from "zod";
+import { success } from "../../lib/responses";
 
 const createCompanySchema = z.object({
   name: z.string().min(1),
@@ -16,54 +16,58 @@ const createCompanySchema = z.object({
 const updateCompanySchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
+  logo: z.string().nullable().optional(),
   managerId: z.string().uuid().optional(),
   isActive: z.boolean().optional(),
 });
 
 class CompaniesController {
-  create = authenticatedControllerHandler2<
+  create = authenticatedControllerHandler<
     { body: CreateCompanyInput },
     unknown
   >(async (req, res) => {
     const data = createCompanySchema.parse(req.body);
     const company = await companiesService.create(data);
-    success(res, company);
+    res.status(201).json(success(company, "Company created successfully"));
   });
 
-  getById = authenticatedControllerHandler2<
-    { params: { id: string } },
-    unknown
-  >(async (req, res) => {
-    const company = await companiesService.getById(req.params.id);
-    success(res, company);
-  });
+  getById = authenticatedControllerHandler<{ params: { id: string } }, unknown>(
+    async (req, res) => {
+      const company = await companiesService.getById(req.params.id);
+      res.status(200).json(success(company, "Company retrieved successfully"));
+    }
+  );
 
-  update = authenticatedControllerHandler2<
+  update = authenticatedControllerHandler<
     { params: { id: string }; body: UpdateCompanyInput },
     unknown
   >(async (req, res) => {
     const data = updateCompanySchema.parse(req.body);
     const company = await companiesService.update(req.params.id, data);
-    success(res, company);
+    res.status(200).json(success(company, "Company updated successfully"));
   });
 
-  delete = authenticatedControllerHandler2<{ params: { id: string } }, unknown>(
+  delete = authenticatedControllerHandler<{ params: { id: string } }, unknown>(
     async (req, res) => {
       await companiesService.delete(req.params.id);
-      success(res, { deleted: true });
+      res
+        .status(200)
+        .json(success({ deleted: true }, "Company deleted successfully"));
     }
   );
 
-  list = authenticatedControllerHandler2<unknown, unknown>(
-    async (_req, res) => {
-      const companies = await companiesService.list();
-      success(res, companies);
-    }
-  );
+  list = authenticatedControllerHandler<unknown, unknown>(async (_req, res) => {
+    const companies = await companiesService.list();
+    res
+      .status(200)
+      .json(success(companies, "Companies retrieved successfully"));
+  });
 
-  getInfo = controllerHandler2<unknown, unknown>(async (_req, res) => {
+  getInfo = controllerHandler<unknown, unknown>(async (_req, res) => {
     const company = await companiesService.getInfo();
-    success(res, company);
+    res
+      .status(200)
+      .json(success(company, "Company info retrieved successfully"));
   });
 }
 

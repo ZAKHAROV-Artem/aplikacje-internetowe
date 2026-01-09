@@ -1,7 +1,9 @@
 import jwt from "jsonwebtoken";
 import { JWTPayload } from "./auth.types";
 import { AuthTokensResponse } from "magnoli-types";
-import { InvalidTokenError } from "../../lib/http";
+import { createError } from "@/lib/responses";
+import { prisma } from "../../lib/prisma";
+import bcrypt from "bcryptjs";
 
 interface TokenUser {
   id: string;
@@ -58,12 +60,12 @@ class AuthService {
         process.env.JWT_REFRESH_SECRET as string
       );
     } catch (_) {
-      throw new InvalidTokenError("Invalid refresh token", {
+      throw createError.Unauthorized("Invalid refresh token", {
         code: "INVALID_REFRESH",
       });
     }
     if (!payload || (payload as JWTPayload).tokenType !== "refresh") {
-      throw new InvalidTokenError("Invalid refresh token payload", {
+      throw createError.Unauthorized("Invalid refresh token payload", {
         code: "INVALID_REFRESH",
       });
     }
@@ -83,6 +85,51 @@ class AuthService {
       jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as string);
     } catch (_) {}
     return { signedOut: true };
+  }
+
+  async loginWithPassword(
+    email: string,
+    password: string
+  ): Promise<AuthTokensResponse> {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw createError.Unauthorized("Invalid email or password", {
+        code: "INVALID_CREDENTIALS",
+      });
+    }
+
+    if (!user.password) {
+      throw createError.Unauthorized(
+        "Password not set for this account. Please use OTP login.",
+        {
+          code: "NO_PASSWORD",
+        }
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      throw createError.Unauthorized("Invalid email or password", {
+        code: "INVALID_CREDENTIALS",
+      });
+    }
+
+    if (!user.isActive) {
+      throw createError.Unauthorized("Account is inactive", {
+        code: "ACCOUNT_INACTIVE",
+      });
+    }
+
+    return this.issueTokens({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      companyId: user.companyId || undefined,
+    });
   }
 }
 

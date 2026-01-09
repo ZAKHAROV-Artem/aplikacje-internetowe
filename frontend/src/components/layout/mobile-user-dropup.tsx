@@ -40,9 +40,10 @@ export default function MobileUserDropup({
   });
   const me = meResponse?.data;
 
-  // Check if user is admin or manager
+  // Check user role
   const userRole = (me as { role?: string })?.role;
-  const isAdmin = userRole === "ADMIN" || userRole === "COMPANY_MANAGER";
+  const isAdmin = userRole === "ADMIN";
+  const isManager = userRole === "COMPANY_MANAGER";
   const navigate = useNavigate();
 
   const [signOut] = useSignOutMutation();
@@ -174,7 +175,7 @@ export default function MobileUserDropup({
           Update your info
         </DropdownMenuItem>
 
-        {/* Admin links - only show for admin users and when not hidden */}
+        {/* Admin links - only show for ADMIN users and when not hidden */}
         {isAdmin && !hideAdminLinks && (
           <>
             <DropdownMenuSeparator />
@@ -197,6 +198,18 @@ export default function MobileUserDropup({
             <DropdownMenuItem onClick={() => navigate("/admin/company")}>
               <Building2 className="h-4 w-4" />
               Company Info
+            </DropdownMenuItem>
+          </>
+        )}
+
+        {/* Manager links - only show Routes for MANAGER users and when not hidden */}
+        {isManager && !hideAdminLinks && (
+          <>
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem onClick={() => navigate("/admin/routes")}>
+              <Route className="h-4 w-4" />
+              Manage Routes
             </DropdownMenuItem>
           </>
         )}

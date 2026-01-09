@@ -1,8 +1,8 @@
 // Key functionality: App routing with auth guard and pages.
 import { createBrowserRouter, Navigate } from "react-router";
 import App from "@/App";
-import PhonePage from "@/views/auth/phone";
 import CodePage from "@/views/auth/code";
+import PasswordLoginPage from "@/views/auth/password";
 import OnboardingPage from "@/views/onboarding";
 import NewRequestPage from "@/views/new-request";
 import OrdersPage from "@/views/orders";
@@ -18,15 +18,22 @@ import AdminRoutesPage from "@/views/admin/routes/index";
 import NewRoutePage from "@/views/admin/routes/new";
 import EditRoutePage from "@/views/admin/routes/[id]";
 import CompanyInfoPage from "@/views/admin/company/index";
-import { RequireAuth, RequireOnboarding } from "@/routes/guards";
+import {
+  RequireAdmin,
+  RequireManager,
+  RequireAuth,
+  RequireOnboarding,
+} from "@/routes/guards";
+import EmailPage from "@/views/auth/email";
 
 export const router = createBrowserRouter([
   {
     element: <App />,
     children: [
       { index: true, element: <Navigate to="/new" replace /> },
-      { path: "/auth/phone", element: <PhonePage /> },
+      { path: "/auth/email", element: <EmailPage /> },
       { path: "/auth/code", element: <CodePage /> },
+      { path: "/auth/password", element: <PasswordLoginPage /> },
       {
         element: <RequireAuth />,
         children: [
@@ -40,14 +47,24 @@ export const router = createBrowserRouter([
               { path: "/orders/:id", element: <OrderDetailPage /> },
               { path: "/success/:orderId", element: <SuccessPage /> },
               { path: "/subscriptions", element: <SubscriptionsPage /> },
-              { path: "/admin", element: <AdminDashboardPage /> },
-              { path: "/admin/users", element: <AdminUsersPage /> },
-              { path: "/admin/users/new", element: <NewUserPage /> },
-              { path: "/admin/users/:id", element: <EditUserPage /> },
-              { path: "/admin/routes", element: <AdminRoutesPage /> },
-              { path: "/admin/routes/new", element: <NewRoutePage /> },
-              { path: "/admin/routes/:id", element: <EditRoutePage /> },
-              { path: "/admin/company", element: <CompanyInfoPage /> },
+              {
+                element: <RequireManager />,
+                children: [
+                  { path: "/admin/routes", element: <AdminRoutesPage /> },
+                  { path: "/admin/routes/new", element: <NewRoutePage /> },
+                  { path: "/admin/routes/:id", element: <EditRoutePage /> },
+                ],
+              },
+              {
+                element: <RequireAdmin />,
+                children: [
+                  { path: "/admin", element: <AdminDashboardPage /> },
+                  { path: "/admin/users", element: <AdminUsersPage /> },
+                  { path: "/admin/users/new", element: <NewUserPage /> },
+                  { path: "/admin/users/:id", element: <EditUserPage /> },
+                  { path: "/admin/company", element: <CompanyInfoPage /> },
+                ],
+              },
             ],
           },
         ],

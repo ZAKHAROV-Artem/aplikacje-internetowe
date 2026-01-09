@@ -1,47 +1,56 @@
-import { success } from "../../lib/http";
+import { success } from "../../lib/responses";
 import authService from "./auth.service";
 import otpService from "./otp.service";
-import { controllerHandler2 } from "../../utils/controllerHandler2";
-import { OtpResponse, OtpVerification } from "./auth.types";
-import { AuthTokensResponse } from "magnoli-types";
+import { controllerHandler } from "../../utils/controllerHandler";
+import { OtpResponse, OtpVerification, PasswordLogin } from "./auth.types";
+import { AuthTokensResponse, ApiResponse } from "magnoli-types";
 
 class AuthController {
-  refresh = controllerHandler2<
+  refresh = controllerHandler<
     { body: { refreshToken: string } },
-    AuthTokensResponse
+    ApiResponse<AuthTokensResponse>
   >(async (req, res) => {
     const { refreshToken } = req.body;
     const tokens = await authService.refresh(refreshToken);
-    success(res, tokens);
+    res.status(200).json(success(tokens, "Tokens refreshed successfully"));
   });
 
-  signOut = controllerHandler2<
+  signOut = controllerHandler<
     { body: { refreshToken: string } },
-    { signedOut: boolean }
+    ApiResponse<{ signedOut: boolean }>
   >(async (req, res) => {
     const { refreshToken } = req.body;
     const result = await authService.signOut(refreshToken);
-    success(res, result);
+    res.status(200).json(success(result, "Signed out successfully"));
   });
 
-  otpSend = controllerHandler2<{ body: { to: string } }, OtpResponse>(
+  otpSend = controllerHandler<{ body: { to: string } }, ApiResponse<OtpResponse>>(
     async (req, res) => {
       const { to } = req.body;
       const data = await otpService.send({ to });
-      success(res, data);
+      res.status(200).json(success(data, "OTP sent successfully"));
     }
   );
 
-  otpCheck = controllerHandler2<{ body: OtpVerification }, AuthTokensResponse>(
+  otpCheck = controllerHandler<{ body: OtpVerification }, ApiResponse<AuthTokensResponse>>(
     async (req, res) => {
       const { to, code } = req.body;
       const result = await otpService.check({
         to,
         code,
       });
-      success(res, result);
+      res.status(200).json(success(result, "OTP verified successfully"));
     }
   );
+
+  passwordLogin = controllerHandler<
+    { body: PasswordLogin },
+    ApiResponse<AuthTokensResponse>
+  >(async (req, res) => {
+    const { email, password } = req.body;
+    const result = await authService.loginWithPassword(email, password);
+    res.status(200).json(success(result, "Login successful"));
+  });
 }
 
 const authController = new AuthController();

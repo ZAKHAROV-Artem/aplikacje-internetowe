@@ -100,7 +100,7 @@ export function DashboardFilters({
           <DateRangePicker
             dateRange={filters.pickupDateRange}
             onDateRangeChange={(range) =>
-              onFilterChange("pickupDateRange", range)
+              onFilterChange("pickupDateRange", range ? { from: range.from, to: range.to } : undefined)
             }
             showQuickActions={false}
             showTips={false}
@@ -113,7 +113,7 @@ export function DashboardFilters({
           <DateRangePicker
             dateRange={filters.dropoffDateRange}
             onDateRangeChange={(range) =>
-              onFilterChange("dropoffDateRange", range)
+              onFilterChange("dropoffDateRange", range ? { from: range.from, to: range.to } : undefined)
             }
             showQuickActions={false}
             showTips={false}

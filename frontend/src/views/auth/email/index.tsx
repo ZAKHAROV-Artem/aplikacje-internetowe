@@ -1,6 +1,6 @@
 // Key functionality: Email entry page for OTP auth, proceeds to verification code.
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import { setLoginTarget } from "@/modules/auth/auth.slice";
 import ErrorBanner from "@/components/error-banner";
 import { Button } from "@/components/ui/button";
@@ -102,6 +102,18 @@ export default function EmailPage() {
             </Button>
           </form>
         </Form>
+
+        <div className="text-center mt-4">
+          <p className="text-muted-foreground text-sm">
+            Or{" "}
+            <Link
+              to="/auth/password"
+              className="text-primary hover:text-primary/80 underline underline-offset-4 transition-colors"
+            >
+              sign in with password
+            </Link>
+          </p>
+        </div>
 
         <div className="text-muted-foreground text-center text-sm text-balance mt-4 px-4">
           By clicking continue, you agree to our{" "}

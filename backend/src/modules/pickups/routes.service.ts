@@ -1,13 +1,13 @@
 import { prisma } from "../../lib/prisma";
-import { NotFoundError } from "../../lib/http";
+import { createError } from "@/lib/responses";
 
 interface CreateRouteInput {
   companyId: string;
   name: string;
   zipCodes: string[];
   weekdays: string[];
-  startTimeMins: number;
-  endTimeMins: number;
+  startTime: string;
+  endTime: string;
   pricelistId?: string;
 }
 
@@ -15,8 +15,8 @@ interface UpdateRouteInput {
   name?: string;
   zipCodes?: string[];
   weekdays?: string[];
-  startTimeMins?: number;
-  endTimeMins?: number;
+  startTime?: string;
+  endTime?: string;
   pricelistId?: string;
   active?: boolean;
 }
@@ -27,12 +27,17 @@ interface RouteResponse {
   name: string;
   zipCodes: string[];
   weekdays: string[];
-  startTimeMins: number;
-  endTimeMins: number;
+  startTime: string;
+  endTime: string;
   pricelistId: string | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
+  pricelist?: {
+    id: string;
+    name: string;
+    slaDays: number;
+  } | null;
 }
 
 class RoutesService {
@@ -53,7 +58,7 @@ class RoutesService {
     });
 
     if (!route) {
-      throw new NotFoundError("Route not found", { routeId: id });
+      throw createError.NotFound("Route not found", { routeId: id });
     }
 
     return this.mapToResponse(route);
@@ -119,12 +124,21 @@ class RoutesService {
       name: route.name,
       zipCodes: route.zipCodes,
       weekdays: route.weekdays,
-      startTimeMins: route.startTimeMins,
-      endTimeMins: route.endTimeMins,
+      startTime: route.startTime,
+      endTime: route.endTime,
       pricelistId: route.pricelistId,
       active: route.active,
       createdAt: route.createdAt,
       updatedAt: route.updatedAt,
+      // Provide default pricelist structure if pricelistId exists
+      // Since pricelist is managed externally, we provide a default structure
+      pricelist: route.pricelistId
+        ? {
+            id: route.pricelistId,
+            name: "Default Pricelist",
+            slaDays: 1, // Default SLA days
+          }
+        : null,
     };
   }
 }

@@ -1,5 +1,5 @@
 import pickupsController from "./pickups.controller";
-import { requireAuth } from "../auth/shared/require-auth";
+import { requireAuth, requireManagerJWT } from "../auth/shared/require-auth";
 import { Router } from "express";
 import validate from "express-zod-safe";
 import {
@@ -12,23 +12,30 @@ import {
   generalLimiter,
 } from "../../middleware/rate-limit.middleware";
 import { pickupRequestCreateInputSchema } from "magnoli-types";
+import { z } from "zod";
 
 const router = Router();
 
-router.get("/", pickupsController.get);
+// Create custom schema that makes routeId optional
+const pickupRequestCreateInputSchemaOptional = pickupRequestCreateInputSchema.extend({
+  routeId: z.string().optional(),
+});
+
+// GET requires auth for filtering by user role
+router.get("/", requireAuth, pickupsController.get);
 
 router.post(
   "/",
   pickupLimiter,
   requireAuth,
-  validate({ body: pickupRequestCreateInputSchema }),
+  validate({ body: pickupRequestCreateInputSchemaOptional }),
   pickupsController.create
 );
 
 router.patch(
   "/bulk/status",
   generalLimiter,
-  requireAuth,
+  requireManagerJWT,
   validate({
     body: bulkPickupStatusUpdateSchema,
   }),
@@ -46,7 +53,7 @@ router.get(
 router.patch(
   "/:id/status",
   generalLimiter,
-  requireAuth,
+  requireManagerJWT,
   validate({
     params: idParamSchema,
     body: pickupStatusUpdateSchema,

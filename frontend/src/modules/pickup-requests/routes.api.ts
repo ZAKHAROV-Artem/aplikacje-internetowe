@@ -6,28 +6,25 @@ export type Route = {
   id: string;
   name: string;
   zipCodes: string[];
-  weekdays: number[];
-  startTimeMins: number | null;
-  endTimeMins: number | null;
-  pricelistId: string;
+  weekdays: string[];
+  startTime: string;
+  endTime: string;
+  pricelistId: string | null;
   createdAt: string;
   updatedAt: string;
   active: boolean;
-  pricelist: {
+  pricelist?: {
     id: string;
     name: string;
     slaDays: number;
-  };
+  } | null;
 };
-
-// API response types
-export type RoutesByZipApiResponse = ApiResponse<{ data: Route[] }>;
 
 export const routesApi = createApi({
   reducerPath: "routesApi",
   baseQuery: baseQueryWithReauth(),
   endpoints: (builder) => ({
-    getRoutesByZip: builder.query<RoutesByZipApiResponse, string>({
+    getRoutesByZip: builder.query<ApiResponse<{ data: Route[] }>, string>({
       query: (zip) => `/routes/zip/${zip}`,
     }),
   }),

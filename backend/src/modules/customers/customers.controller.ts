@@ -1,36 +1,37 @@
-import { success } from "../../lib/http";
+import { success } from "../../lib/responses";
 import customersService from "./customers.service";
-import { authenticatedControllerHandler2 } from "../../utils/controllerHandler2";
+import { authenticatedControllerHandler } from "../../utils/controllerHandler";
+import { ApiResponse } from "magnoli-types";
 
 class CustomersController {
-  getMe = authenticatedControllerHandler2<unknown, unknown>(
+  getMe = authenticatedControllerHandler<unknown, unknown>(
     async (req, res) => {
       const data = await customersService.getById((req as any).user.sub);
-      success(res, data);
+      res.status(200).json(success(data, "Customer profile retrieved successfully"));
     }
   );
 
-  updateMe = authenticatedControllerHandler2<{ body: any }, unknown>(
+  updateMe = authenticatedControllerHandler<{ body: any }, unknown>(
     async (req, res) => {
       const updated = await customersService.update(
         (req as any).user.sub,
         req.body
       );
-      success(res, updated);
+      res.status(200).json(success(updated, "Customer profile updated successfully"));
     }
   );
 
-  getCustomerRules = authenticatedControllerHandler2<
+  getCustomerRules = authenticatedControllerHandler<
     { params: { customerId: string } },
-    unknown[]
+    ApiResponse<unknown[]>
   >(async (req, res) => {
     const rules = await customersService.getCustomerRules(
       req.params.customerId
     );
-    success(res, rules);
+    res.status(200).json(success(rules, "Route rules retrieved successfully"));
   });
 
-  toggleCustomerRule = authenticatedControllerHandler2<
+  toggleCustomerRule = authenticatedControllerHandler<
     { params: { ruleId: string }; body: { isActive: boolean } },
     unknown
   >(async (req, res) => {
@@ -38,7 +39,7 @@ class CustomersController {
       req.body.isActive,
       req.params.ruleId
     );
-    success(res, rule);
+    res.status(200).json(success(rule, "Customer rule updated successfully"));
   });
 }
 

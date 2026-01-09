@@ -1,52 +1,57 @@
-import { success, fail } from "../../lib/http";
+import { success, error } from "../../lib/responses";
 import pickupsService from "./pickups.service";
 import analyticsService from "../analytics/analytics.service";
 import {
-  authenticatedControllerHandler2,
-  controllerHandler2,
-} from "../../utils/controllerHandler2";
+  authenticatedControllerHandler,
+  controllerHandler,
+} from "../../utils/controllerHandler";
 
 class PickupsController {
-  get = controllerHandler2<
+  get = controllerHandler<
     { query: { page?: number; limit?: number } },
     unknown
   >(async (req, res) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const data = await pickupsService.get({ page, limit });
-    success(res, data);
+
+    // Get user info from JWT token if authenticated (for filtering)
+    const userId = (req as any).user?.sub;
+    const userRole = (req as any).user?.role;
+
+    const data = await pickupsService.get({ page, limit, userId, userRole });
+    res.status(200).json(success(data, "Pickups retrieved successfully"));
   });
 
-  getById = controllerHandler2<{ params: { id: string } }, unknown>(
+  getById = authenticatedControllerHandler<{ params: { id: string } }, unknown>(
     async (req, res) => {
-      const data = await pickupsService.getById(req.params.id);
-      success(res, data);
+      const userId = (req as any).user?.sub;
+      const userRole = (req as any).user?.role;
+      const data = await pickupsService.getById(
+        req.params.id,
+        userId,
+        userRole
+      );
+      res.status(200).json(success(data, "Pickup retrieved successfully"));
     }
   );
 
-  create = authenticatedControllerHandler2<any, unknown>(async (req, res) => {
+  create = authenticatedControllerHandler<any, unknown>(async (req, res) => {
     const userId = (req as any).user?.sub;
     if (!userId) {
-      fail(
-        res,
-        401,
-        "UNAUTHORIZED",
-        "User ID not found in authentication token",
-        {}
-      );
+      res
+        .status(401)
+        .json(
+          error("User ID not found in authentication token", ["UNAUTHORIZED"])
+        );
       return;
     }
 
     // Get user's companyId from auth token
     const companyId = (req as any).user?.companyId;
     if (!companyId) {
-      fail(
-        res,
-        400,
-        "BAD_REQUEST",
-        "User must be associated with a company",
-        {}
-      );
+      res
+        .status(400)
+        .json(error("User must be associated with a company", ["BAD_REQUEST"]));
       return;
     }
 
@@ -73,28 +78,30 @@ class PickupsController {
       // Analytics failure shouldn't break the request
     }
 
-    success(res, data);
+    res.status(201).json(success(data, "Pickup created successfully"));
   });
 
-  updateStatus = authenticatedControllerHandler2<
+  updateStatus = authenticatedControllerHandler<
     { params: { id: string }; body: { status: string } },
     unknown
   >(async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
+    const userRole = (req as any).user?.role;
 
-    const data = await pickupsService.updateStatus(id, status);
-    success(res, data);
+    const data = await pickupsService.updateStatus(id, status, userRole);
+    res.status(200).json(success(data, "Pickup status updated successfully"));
   });
 
-  bulkUpdateStatus = authenticatedControllerHandler2<
+  bulkUpdateStatus = authenticatedControllerHandler<
     { body: { ids: string[]; status: string } },
     unknown
   >(async (req, res) => {
     const { ids, status } = req.body;
+    const userRole = (req as any).user?.role;
 
-    const data = await pickupsService.bulkUpdateStatus(ids, status);
-    success(res, data);
+    const data = await pickupsService.bulkUpdateStatus(ids, status, userRole);
+    res.status(200).json(success(data, "Pickup statuses updated successfully"));
   });
 }
 
